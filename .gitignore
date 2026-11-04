@@ -1,0 +1,12 @@
+node_modules/
+dist/
+outputs/
+work/
+reports/
+.env
+.env.*
+*.pfx
+*.p12
+*.log
+
+.tools/

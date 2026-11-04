@@ -1,0 +1,6 @@
+#stockDialog { width: min(1100px, 96vw); max-width:96vw; }
+#stockContent form { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin:18px 0; }
+#stockContent table { width:100%; } #stockContent .stock-scroll { overflow:auto; }
+#stockContent input, #stockContent select { width:100%; box-sizing:border-box; }
+#stockContent h3 { margin-top:24px; } #stockContent .stock-warning { color:#f6ba61; }
+@media(max-width:700px) { .app { display:block; } .sidebar { width:auto; position:static; } .main { margin:0; padding:12px; } }

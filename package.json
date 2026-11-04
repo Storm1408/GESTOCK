@@ -1,0 +1,68 @@
+{
+  "name": "gestock",
+  "version": "1.0.0",
+  "description": "Gestão de stocks do Posto Médico e Armazém de Saúde",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis",
+    "dev": "electron .",
+    "configure-updates": "node scripts/configure-updates.cjs",
+    "check": "node scripts/check-source.cjs",
+    "test": "node tests-updates.cjs && node tests-moderation.cjs && node tests-accounts.cjs && node tests-accounts-server.cjs && node tests-gestock.cjs",
+    "verify-release": "node scripts/verify-release.cjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "pt.gestock.app",
+    "productName": "GESTOCK",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "styles.css",
+      "README.md",
+      "supabase/*.sql",
+      "branding.js",
+      "assets/**/*",
+      "STATUS-v23.md",
+      "design.css",
+      "access.js",
+      "updates.js",
+      "update-config.json",
+      "STATUS-v24.md",
+      "STATUS-v241.md",
+      "app-config.js",
+      "stock.js",
+      "stock.css"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/app-icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/app-icon.ico",
+      "uninstallerIcon": "assets/app-icon.ico"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "CONFIGURAR_OWNER",
+        "repo": "CONFIGURAR_REPO",
+        "releaseType": "release"
+      }
+    ],
+    "artifactName": "GESTOCK-Setup-${version}.${ext}"
+  },
+  "author": "GESTOCK",
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  }
+}
