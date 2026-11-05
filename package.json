@@ -1,6 +1,6 @@
 {
   "name": "gestock",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Gestão de stocks do Posto Médico e Armazém de Saúde",
   "main": "main.js",
   "scripts": {
@@ -29,7 +29,6 @@
       "README.md",
       "supabase/*.sql",
       "branding.js",
-      "assets/**/*",
       "STATUS-v23.md",
       "design.css",
       "access.js",
@@ -39,17 +38,21 @@
       "STATUS-v241.md",
       "app-config.js",
       "stock.js",
-      "stock.css"
+      "stock.css",
+      "identity.css",
+      "assets/*.ico",
+      "assets/identity/gestock-logo-refined-dark.png",
+      "assets/identity/gestock-background-approved.png"
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/app-icon.ico"
+      "icon": "assets/gestock-icon-v1.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "assets/app-icon.ico",
-      "uninstallerIcon": "assets/app-icon.ico"
+      "installerIcon": "assets/gestock-icon-v1.ico",
+      "uninstallerIcon": "assets/gestock-icon-v1.ico"
     },
     "publish": [
       {

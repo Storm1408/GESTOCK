@@ -1,6 +1,11 @@
-#stockDialog { width: min(1100px, 96vw); max-width:96vw; }
-#stockContent form { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin:18px 0; }
-#stockContent table { width:100%; } #stockContent .stock-scroll { overflow:auto; }
-#stockContent input, #stockContent select { width:100%; box-sizing:border-box; }
-#stockContent h3 { margin-top:24px; } #stockContent .stock-warning { color:#f6ba61; }
-@media(max-width:700px) { .app { display:block; } .sidebar { width:auto; position:static; } .main { margin:0; padding:12px; } }
+#stockDialog{width:min(1120px,calc(100vw - 40px));max-width:calc(100vw - 40px);max-height:calc(100dvh - 40px);padding:28px;overflow:auto;scrollbar-gutter:stable;border-radius:16px}
+#stockDialog>h2{margin:0 100px 6px 0;font-size:23px;letter-spacing:-.5px}#closeStock{float:right;background:#23382a;color:#e9eedc;border-color:#495f44}
+#stockStatus{color:var(--muted);padding-bottom:18px;border-bottom:1px solid var(--line);margin:8px 0 20px}
+#stockContent{clear:both;min-width:0}#stockContent h3{font-size:15px;margin:28px 0 14px;color:#e6e8d6}#stockContent p{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+#stockContent form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));align-items:end;gap:14px;padding:18px;background:#101a14;border:1px solid var(--line);border-radius:10px;margin:0 0 22px}
+#stockContent label{margin:0;min-width:0;line-height:1.5;font-size:12px;color:#bdcebf}#stockContent>label{max-width:420px;margin:16px 0}
+#stockContent input:not([type=checkbox]),#stockContent select{display:block;width:100%;min-width:0;box-sizing:border-box;height:42px;margin-top:7px;padding:9px 11px;background:#0d1510;color:var(--text);border:1px solid #3e5141;border-radius:7px;font:13px 'Segoe UI',sans-serif}
+#stockContent input[type=checkbox]{width:18px;height:18px;margin:0;accent-color:var(--gold)}#stockContent input[type=hidden]{display:none!important}
+#stockContent form .btn{height:42px;background:#347c59;color:#f0fff1;border-color:#509c72}#stockContent>.btn{margin:0 8px 8px 0;background:#243a2a;color:#e2e9d5;border-color:#526342}
+#stockContent .stock-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:9px}#stockContent table{width:100%;min-width:600px}#stockContent th,#stockContent td{padding:12px 14px;text-align:left}#stockContent .stock-warning{color:var(--gold)}
+@media(max-width:700px){#stockDialog{width:calc(100vw - 20px);max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:18px}#stockDialog>h2{font-size:19px;margin-right:75px}#stockContent form{grid-template-columns:1fr;padding:14px}#stockContent form .btn{width:100%}}

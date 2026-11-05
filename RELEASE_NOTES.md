@@ -1,5 +1,3 @@
-# Gestock 1.0.2
+# Gestock 1.0.3
 
-Corrigido erro pós-login «ensureGESTOCKAccess is not defined»: a sincronização chama a função de controlo de acesso herdada existente. Mantida a verificação de contas bloqueadas.
-Nome apresentado da aplicação alterado para Gestock, incluindo janela e instalador. Identificadores técnicos e nomes dos artefactos de distribuição mantidos por compatibilidade.
-Adicionado teste de regressão de carregamento após autenticação e de bloqueio antes de consultar o catálogo. Todos os testes locais passaram. Instalador de testes sem assinatura digital; login real deve ser validado pelo utilizador.
+Identidade visual verde/amarelo sobre grafite, com logótipo e fundo aprovados. Login e navegação atualizados; retiradas referências FiveM do cabeçalho/login. Janela de stocks com margens, scroll e formulários alinhados; permissões apresentadas com checkboxes compactas. Funcionalidades e permissões preservadas. Versão de testes sem assinatura digital.

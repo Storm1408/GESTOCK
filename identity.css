@@ -1,0 +1,30 @@
+/* Gestock: graphite, emerald and yellow. Approved artwork, no legacy sprite. */
+:root{color-scheme:dark;--bg:#0d1210;--panel:#151c18;--panel2:#1b251f;--line:#303c34;--blue:#398765;--blue2:#2b6b50;--green:#59b68a;--text:#edf1e9;--muted:#9aa99e;--gold:#e4c44f}
+body{background:linear-gradient(#0d1210df,#0d1210ed),url('assets/identity/gestock-background-approved.png') center/cover fixed;}
+.s-watermark,.creator-credit{display:none!important}body::before,dialog::before{display:none}
+.sidebar{background:#101713f5;border-color:var(--line)}
+.brand{gap:12px;padding-bottom:26px}.brand h1{font-size:22px;letter-spacing:-.7px}.brand small{font-size:8px;letter-spacing:1.5px;color:var(--muted)}
+.brand-icon.gestock-symbol{width:48px;height:40px;flex:0 0 48px;border-radius:0;background: url('assets/identity/gestock-logo-refined-dark.png') center top/48px auto no-repeat;mix-blend-mode:lighten;}
+.nav-item.active{background:#25583e42;border-color:#4a7c574d;box-shadow:inset 3px 0 var(--gold);color:#f2efd9}.nav-item:hover{background:#2d4c383d;color:#f5f3e7}.nav-item.active .nav-icon{color:var(--gold)}
+.side-label{color:#849889}.topbar{border-color:var(--line)}.eyebrow{color:var(--gold)}
+.btn-primary,#authDialog .dialog-actions .btn{background:#347c59;border:1px solid #4d9c74;color:#f8fff9;box-shadow:none}.btn-primary:hover,#authDialog .dialog-actions .btn:hover{background:#409167;box-shadow:none}
+.btn-secondary{background:#202b23;border-color:#3b4b40;color:#e2e9e0}.btn-secondary:hover{background:#2b3a2f}.btn:disabled{cursor:not-allowed}
+.stat-card,.table-card,.dashboard-panel,.feature-panel,.item-card{background:#151d18ed;border-color:var(--line);box-shadow:0 10px 30px #0002}.stat-card{border-top-color:#617044}.stat-card span{color:var(--muted)}
+.search-wrap,.toolbar select{background:#101813;border-color:var(--line)}.search-wrap:focus-within{border-color:#c2ac4c;box-shadow:none}
+.spawn-code,.category-chip{background:#233b2c;color:#b7d6bd;border-color:#3e634a}.copy-btn{background:#273d2c;border-color:#506144;color:#e1dfb0}.feature-row code,.item-card code{color:#d4cb87}.item-placeholder,.card-placeholder{color:#bdd0aa}
+.table-heading,.table-footer,td{border-color:var(--line)}thead{background:#111a14}th{color:#9eafa3}td{color:#e0e9df}
+label input,label textarea,.group-options,.rename-group-form input,.account-controls input,.block-filters input,.block-filters select,#createUserRole{background:#0f1712;border-color:#3a4b3e;color:var(--text)}
+label input:focus,label textarea:focus,:focus-visible{outline-color:var(--gold);border-color:#bba948}
+.group-option input,input[type=checkbox]{accent-color:var(--gold)}.dialog-note{background:#202e23;color:#b3c4b7}
+dialog:not(#authDialog){background:#151d18;border-color:#465a49;box-shadow:0 30px 100px #000b}dialog::backdrop{background:#070d09c9;backdrop-filter:blur(5px)}
+.admin-tabs{border-color:var(--line)}.admin-tabs [aria-selected=true]{background:#34513a50;border-color:#68804c80;box-shadow:inset 0 -2px var(--gold)}
+#authDialog{background:url('assets/identity/gestock-background-approved.png') center/cover no-repeat,#0d1210}#authDialog::after{display:none}#authDialog::backdrop{background:#0d1210}
+.auth-stage{padding:28px 24px 30px;gap:14px;min-height:100dvh}
+.brand-lockup{background:none;mask:none;mix-blend-mode:normal;aspect-ratio:auto;width:auto;display:flex;align-items:center;flex-direction:column;gap:10px}
+.brand-lockup img{display:block;width:190px;height:auto;mix-blend-mode:lighten}.brand-lockup>span{font-size:9px;letter-spacing:2.3px;color:#a9b7a8;margin:0}
+#authForm.login-card{width:min(430px,100%);padding:26px 28px;background:#101a14ed;border:1px solid #405244;border-radius:15px;box-shadow:0 22px 70px #0006}
+.login-heading h2{font-size:23px;color:var(--text)}.login-heading p{color:var(--muted)}#authDialog label.login-field{border-color:#3a4d40;background:#0b140ef0}#authDialog label.login-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 2px #e4c44f12}.field-icon,.password-toggle{color:#8ea995}
+.login-divider{color:var(--muted)}.login-divider::before,.login-divider::after{background:#34473a}.login-access{border-color:#334a39;background:#14241a80;color:#c1d1c1}.login-access svg{color:#b5ad63}.login-access p span{color:#91a895}.login-motto{color:#9bb099;letter-spacing:2px}.login-motto span{color:var(--gold)}
+#authMessage{color:#f1c481}.toast[data-type=success]{background:#143923;border-color:#509569;color:#d7f1dd}.toast[data-type=info]{background:#273120;border-color:#9c9144;color:#eee9cb}
+@media(max-height:760px){.auth-stage{gap:10px;padding-top:18px;padding-bottom:18px}.brand-lockup img{width:140px}#authForm.login-card{padding:20px 26px}.login-motto{margin-top:6px}}
+@media(max-width:700px){.app-shell{display:block}.sidebar{width:100%;padding:14px;display:flex;flex-direction:row;flex-wrap:wrap;gap:4px}.brand{width:100%;padding:0 0 10px}.brand>div:last-child{display:block}.sidebar .nav-item{width:auto;min-width:44px;padding:8px 10px}.sidebar .nav-item span{display:inline}.sidebar .side-label,.category-list,.sidebar-bottom{display:none}.main{padding:22px 14px}.topbar{gap:12px}.brand-lockup img{width:145px}.auth-stage{padding:18px 16px}.brand-lockup>span{font-size:8px;letter-spacing:1.5px}}

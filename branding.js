@@ -1,16 +1,10 @@
-// Exact approved artwork is displayed through CSS sprite viewports.
+// Gestock identity and accessible interaction controls.
 (() => {
   const brand = document.querySelector('.brand-icon');
   brand.textContent = '';
-  brand.classList.add('vault-art');
+  brand.classList.add('gestock-symbol');
   brand.setAttribute('role','img');
-  brand.setAttribute('aria-label','Cofre Gestock original');
-  for (const host of [document.body,...document.querySelectorAll('dialog')]) {
-    const mark = document.createElement('span');
-    mark.className = 's-watermark';
-    mark.setAttribute('aria-hidden','true');
-    host.prepend(mark);
-  }
+  brand.setAttribute('aria-label','Símbolo Gestock');
   const toggle = document.getElementById('togglePassword');
   toggle.addEventListener('click', () => {
     const input = document.getElementById('authPassword');

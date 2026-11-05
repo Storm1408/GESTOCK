@@ -13,12 +13,12 @@
   <script defer src="app-config.js"></script>
   <script defer src="stock.js"></script>
   <script defer src="renderer.js"></script>
-<link rel="stylesheet" href="stock.css"></head>
+<link rel="stylesheet" href="stock.css"><link rel="stylesheet" href="identity.css"></head>
 <body>
   <span class="creator-credit">By: $torm</span>
   <div class="app-shell" id="appShell" hidden>
     <aside class="sidebar">
-      <div class="brand"><div class="brand-icon">SV</div><div><h1>Gestock</h1><small>FIVEM ITEM DATABASE</small></div></div>
+      <div class="brand"><div class="brand-icon">SV</div><div><h1>Gestock</h1><small>GESTÃO DE STOCKS</small></div></div>
       <div class="side-label">BIBLIOTECA</div>
       <button class="nav-item active" id="navDashboard"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="11" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="18" width="7" height="3" rx="1"/></svg><span>Dashboard</span></button><button class="nav-item" id="navAll"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg><span>Todos os itens</span></button><button class="nav-item" id="navFavorites"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2-4.5-4.4 6.3-.9L12 3Z"/></svg><span>Favoritos</span></button><button class="nav-item" id="navRequests"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 14V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9M3 14h5l2 3h4l2-3h5m-4 5h6m-3-3v6"/></svg><span>Pedidos de itens</span></button><button class="nav-item" id="navTrash" hidden><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg><span>Reciclagem</span></button>
       <button class="nav-item" id="manageUsersBtn" hidden><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 2 9 4v6c0 6-9 10-9 10S3 18 3 12V6l9-4Z"/><circle cx="12" cy="9" r="2.5"/><path d="M7.5 17v-1a4.5 4.5 0 0 1 9 0v1"/></svg><span>Administração</span></button>
@@ -32,7 +32,7 @@
     </aside>
     <main class="main">
       <header class="topbar">
-        <div><div class="eyebrow">CATÁLOGO DE ITENS</div><h2>Biblioteca de spawns</h2></div>
+        <div><div class="eyebrow">CATÁLOGO DE ITENS</div><h2>Catálogo de materiais</h2></div>
         <div class="top-actions"><button class="btn btn-secondary" id="exportBtn">Exportar CSV</button><label class="btn btn-secondary file-label" id="importLabel">Importar CSV<input type="file" id="importFile" accept=".csv,text/csv" hidden></label><button class="btn btn-primary" id="addBtn">＋ Adicionar item</button></div>
       </header>
       <section class="dashboard-panel" id="dashboardPanel"><h3>Visão geral</h3><div class="dashboard-grid" id="dashboardGrid"></div><h3>Últimos itens</h3><div id="dashboardRecent"></div></section><section class="toolbar" id="catalogToolbar">
@@ -49,7 +49,7 @@
         <div class="table-heading"><div><h3>Itens registados</h3><p>Seleciona o spawn para o copiares instantaneamente.</p></div><span class="pill" id="syncPill">Local</span></div>
         <div class="cards-grid" id="itemsCards" hidden></div><div class="table-scroll" id="itemsTable"><table><thead><tr><th>NOME DO ITEM</th><th>NOME DE SPAWN</th><th>GRUPO</th><th>DESCRIÇÃO</th><th></th></tr></thead><tbody id="itemsBody"></tbody></table></div>
         <div id="emptyState" class="empty-state"><div class="empty-icon">⌕</div><h3>Ainda não existem itens</h3><p>Adiciona um item ou importa um ficheiro CSV para começar.</p><button class="btn btn-primary" id="emptyAddBtn">＋ Adicionar primeiro item</button></div>
-        <div class="table-footer"><span id="footerCount">0 itens</span><span>Gestock <span class="muted">· Catálogo FiveM</span></span></div>
+        <div class="table-footer"><span id="footerCount">0 itens</span><span>Gestock <span class="muted">· Gestão de stocks</span></span></div>
       </section>
       <section class="feature-panel" id="requestsPanel" hidden><div class="table-heading"><h3>Pedidos de itens</h3><div class="request-actions"><button class="btn btn-secondary" id="requestArchiveBtn" aria-pressed="false">Arquivo (0)</button><button class="btn btn-primary" id="newRequestBtn">＋ Sugerir item</button></div></div><p id="requestMigrationHint" class="dialog-note" hidden>As novas opções dos pedidos precisam da migração v2.4 no Supabase. Contacta um administrador.</p><div id="requestsList"></div></section><section class="feature-panel" id="trashPanel" hidden><div class="table-heading"><h3>Reciclagem</h3></div><div id="trashList"></div></section><footer>Catálogo partilhado · As alterações são protegidas por permissões no Supabase.</footer>
     </main>
@@ -73,9 +73,9 @@
   <dialog id="requestDialog"><span class="creator-credit">By: $torm</span><form id="requestForm"><div class="dialog-head"><h2>Sugerir novo item</h2><button type="button" class="icon-btn" id="closeRequest">×</button></div><label>Nome do item<input id="requestName" maxlength="120" required></label><label>Nome de spawn<input id="requestSpawn" maxlength="120" required></label><label>Justificação<textarea id="requestReason" maxlength="500"></textarea></label><div class="dialog-actions"><button type="submit" class="btn btn-primary">Enviar pedido</button></div></form></dialog><dialog id="authDialog" aria-label="Iniciar sessão no Gestock">
     <span class="creator-credit">By: $torm</span>
     <div class="auth-stage">
-      <div class="login-brand brand-lockup" role="img" aria-label="Gestock — FiveM Item Database"></div>
+      <div class="login-brand brand-lockup"><img src="assets/identity/gestock-logo-refined-dark.png" alt="Gestock"><span>GESTÃO DE STOCKS E ARMAZÉNS</span></div>
       <form id="authForm" method="dialog" class="login-card">
-        <div class="login-heading"><h2>Iniciar sessão</h2><p>Acede ao catálogo de itens FiveM</p></div>
+        <div class="login-heading"><h2>Iniciar sessão</h2><p>Posto Médico · Armazém de Saúde</p></div>
         <label class="login-field"><span class="sr-only">Username</span><span class="field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="m3 5 9 8 9-8"/></svg></span><input id="authUsername" autocomplete="username" type="text" required minlength="3" maxlength="40" spellcheck="false" autocapitalize="none" placeholder="Username"></label>
         <label class="login-field password-field"><span class="sr-only">Palavra-passe</span><span class="field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="10" width="16" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3m-5 5v3"/></svg></span><input id="authPassword" autocomplete="current-password" type="password" required minlength="6" placeholder="Palavra-passe"><button class="password-toggle" id="togglePassword" type="button" aria-label="Mostrar palavra-passe" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></label>
         <div class="dialog-actions"><button type="submit" class="btn btn-primary">Iniciar sessão <span aria-hidden="true">→</span></button></div>
@@ -83,7 +83,7 @@
         <div class="login-divider"><span>ou</span></div>
         <div class="login-access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="m12 2 9 4v6c0 6-9 10-9 10S3 18 3 12V6Z"/><path d="m8 12 3 3 5-6"/></svg><p>O acesso é restrito a utilizadores autorizados.<br><span>Se tiveres problemas a iniciar sessão, contacta um administrador.</span></p></div>
       </form>
-      <p class="login-motto">ORGANIZA <span>·</span> PESQUISA <span>·</span> GERIR <span>·</span> EVOLUIR</p>
+      <p class="login-motto">ORGANIZAR <span>·</span> REPOR <span>·</span> CUIDAR</p>
     </div>
   </dialog>
   <dialog id="adminDialog"><span class="creator-credit">By: $torm</span><div class="dialog-panel"><div class="dialog-head"><div><div class="eyebrow">ADMINISTRAÇÃO</div><h2>Administração</h2></div><button class="icon-btn" type="button" id="closeAdmin">×</button></div><div class="admin-tabs" role="tablist" aria-label="Administração"><button type="button" id="adminUsersTab" role="tab" aria-selected="true" aria-controls="adminUsersPanel" tabindex="0">Utilizadores</button><button type="button" id="adminGroupsTab" role="tab" aria-selected="false" aria-controls="adminGroupsPanel" tabindex="-1">Gerir grupos</button><button type="button" id="adminBlocksTab" role="tab" aria-selected="false" aria-controls="adminBlocksPanel" tabindex="-1">Bloqueios</button><button type="button" id="adminLogsTab" role="tab" aria-selected="false" aria-controls="adminLogsPanel" tabindex="-1">Logs</button></div><section id="adminUsersPanel" class="admin-tab-panel" role="tabpanel" aria-labelledby="adminUsersTab" tabindex="0"><div class="accounts-heading"><p class="readonly-hint">Gere os usernames e as permissões. As novas contas são criadas apenas por administradores.</p><button type="button" class="btn btn-primary" id="newUserBtn">＋ Criar utilizador</button></div><div id="userManagerList" class="group-manager-list"></div></section><section id="adminGroupsPanel" class="admin-tab-panel" role="tabpanel" aria-labelledby="adminGroupsTab" tabindex="0" hidden><form id="groupForm" class="group-add-form"><label>Nome<input id="newGroupName" maxlength="60" required placeholder="Ex.: Equipamento"></label><label>Tipo<select id="newGroupParent"><option value="">Grupo principal</option></select></label><button class="btn btn-primary" type="submit">＋ Criar</button></form>
