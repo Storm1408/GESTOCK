@@ -1,6 +1,6 @@
 {
   "name": "gestock",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Gestão de stocks do Posto Médico e Armazém de Saúde",
   "main": "main.js",
   "scripts": {
@@ -54,8 +54,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "CONFIGURAR_OWNER",
-        "repo": "CONFIGURAR_REPO",
+        "owner": "Storm1408",
+        "repo": "GESTOCK",
         "releaseType": "release"
       }
     ],
