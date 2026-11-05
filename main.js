@@ -9,7 +9,7 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1180, height: 780, minWidth: 900, minHeight: 620,
     backgroundColor: '#151517',
-    title: 'GESTOCK',
+    title: 'Gestock',
     icon: path.join(__dirname, 'assets', 'app-icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

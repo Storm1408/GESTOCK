@@ -10,7 +10,7 @@ function createUpdateService({app,autoUpdater,dialog,publish,beforeInstall=async
   let busy=false,available=null,downloaded=null,lastOffered=null,lastChecked=0;
   const ready=()=>app.isPackaged&&publish?.provider==='github'&&Boolean(publish.owner&&publish.repo)&&![publish.owner,publish.repo].some(v=>v.startsWith('CONFIGURAR_'));
   async function offerInstall(version) {
-    const answer=await dialog.showMessageBox({type:'question',title:'Atualização pronta',message:`GESTOCK ${version} está pronto a instalar.`,detail:'A aplicação vai terminar sessão, reiniciar e instalar a atualização. Guarda as alterações antes de continuar.',buttons:['Mais tarde','Reiniciar e instalar'],defaultId:0,cancelId:0});
+    const answer=await dialog.showMessageBox({type:'question',title:'Atualização pronta',message:`Gestock ${version} está pronto a instalar.`,detail:'A aplicação vai terminar sessão, reiniciar e instalar a atualização. Guarda as alterações antes de continuar.',buttons:['Mais tarde','Reiniciar e instalar'],defaultId:0,cancelId:0});
     if(answer.response!==1)return {message:`Versão ${version} descarregada. Podes instalá-la em Verificar atualizações.`};
     await beforeInstall();
     autoUpdater.quitAndInstall(false,true);
@@ -27,7 +27,7 @@ function createUpdateService({app,autoUpdater,dialog,publish,beforeInstall=async
       available=result.updateInfo.version;
       if(!manual&&lastOffered===available)return {message:`Versão ${available} disponível.`};
       lastOffered=available;
-      const answer=await dialog.showMessageBox({type:'info',title:'Atualização disponível',message:`Está disponível uma nova versão do GESTOCK: ${available}`,detail:`Versão instalada: ${app.getVersion()}. Queres descarregar a atualização? A tua conta e os dados do catálogo são mantidos.`,buttons:['Agora não','Descarregar atualização'],defaultId:0,cancelId:0});
+      const answer=await dialog.showMessageBox({type:'info',title:'Atualização disponível',message:`Está disponível uma nova versão do Gestock: ${available}`,detail:`Versão instalada: ${app.getVersion()}. Queres descarregar a atualização? A tua conta e os dados do catálogo são mantidos.`,buttons:['Agora não','Descarregar atualização'],defaultId:0,cancelId:0});
       if(answer.response!==1)return {message:`Versão ${available} disponível. Usa Verificar atualizações quando quiseres atualizar.`};
       await autoUpdater.downloadUpdate();
       downloaded=available;setProgress(-1);

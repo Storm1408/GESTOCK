@@ -1,5 +1,5 @@
-# GESTOCK 1.0.1 — testes com Supabase
+# Gestock 1.0.2
 
-Ligação ao projeto Supabase GESTOCK, serviço de login por username, proprietário Developer nos stocks e Admin no catálogo herdado. Feed configurado para Storm1408/GESTOCK; uma atualização só fica disponível após publicação de release com instalador, blockmap e latest.yml.
-
-Testes locais completos passaram. Verificação remota confirmou permissões do proprietário, rejeição de credenciais inválidas e bloqueio de acesso anónimo aos stocks. Login real deve ser testado pelo proprietário com a sua password. Sem assinatura digital; arquitetura mobile e unificação de acessos ainda pendentes. Não usar em produção.
+Corrigido erro pós-login «ensureGESTOCKAccess is not defined»: a sincronização chama a função de controlo de acesso herdada existente. Mantida a verificação de contas bloqueadas.
+Nome apresentado da aplicação alterado para Gestock, incluindo janela e instalador. Identificadores técnicos e nomes dos artefactos de distribuição mantidos por compatibilidade.
+Adicionado teste de regressão de carregamento após autenticação e de bloqueio antes de consultar o catálogo. Todos os testes locais passaram. Instalador de testes sem assinatura digital; login real deve ser validado pelo utilizador.

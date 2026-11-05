@@ -12,7 +12,7 @@ async function ensureSpawnVaultAccess() {
   if (!data || typeof data.blocked !== 'boolean') throw Error('Não foi possível verificar o acesso.');
   if (!data.blocked) return;
   const reason = typeof data.reason === 'string' && data.reason.trim() ? data.reason.trim() : 'Motivo não indicado pelo administrador.';
-  const blockedMessage = `O teu acesso ao SpawnVault está bloqueado.\nMotivo: ${reason}\nContacta um administrador se precisares de esclarecimentos.`;
+  const blockedMessage = `O teu acesso ao Gestock está bloqueado.\nMotivo: ${reason}\nContacta um administrador se precisares de esclarecimentos.`;
   for (const dialog of document.querySelectorAll('dialog[open]')) if (dialog.id !== 'authDialog') dialog.close();
   const activeClient = client;
   // Clear the UI and local session even if the sign-out endpoint is unavailable.

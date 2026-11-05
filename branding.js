@@ -4,7 +4,7 @@
   brand.textContent = '';
   brand.classList.add('vault-art');
   brand.setAttribute('role','img');
-  brand.setAttribute('aria-label','Cofre GESTOCK original');
+  brand.setAttribute('aria-label','Cofre Gestock original');
   for (const host of [document.body,...document.querySelectorAll('dialog')]) {
     const mark = document.createElement('span');
     mark.className = 's-watermark';
