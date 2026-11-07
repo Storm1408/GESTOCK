@@ -17,6 +17,15 @@ export function createAccountHandler(env){
    const text=await request.text();if(text.length>8192)return respond(413,{error:'Pedido demasiado grande.'});
    let body;try{body=JSON.parse(text)}catch{return respond(400,{error:'Pedido inválido.'})}
    if(!body||typeof body!=='object')return respond(400,{error:'Pedido inválido.'});
+   if(body.action==='lookup'){
+    const username=typeof body.username==='string'?body.username.trim():'';
+    if(!usernamePattern.test(username))return respond(200,{exists:false});
+    const ip=(request.headers.get('x-forwarded-for')||request.headers.get('x-real-ip')||'unknown').split(',')[0].trim();
+    const limit=await api('/rest/v1/rpc/spawnvault_take_login_limit',{bucket_key:'lookup:'+await hash(ip),max_hits:60});
+    if(!limit.ok)return respond(503,{error:'Verificação indisponível.'});if(limit.data!==true)return respond(429,{error:'Aguarda antes de voltar a pesquisar.'});
+    const result=await api('/rest/v1/rpc/spawnvault_resolve_login',{login_username:username});
+    if(!result.ok)return respond(503,{error:'Verificação indisponível.'});return respond(200,{exists:Boolean(result.data?.length)});
+   }
    if(body.action==='login'){
     const username=typeof body.username==='string'?body.username.trim():'';
     const password=typeof body.password==='string'?body.password:'';

@@ -1,59 +1,90 @@
-// Additive GESTOCK client. Authorization and stock calculations live in SQL RPCs.
+// Stock UI: all writes are server checked. Product IDs only come from explicit suggestions.
 (() => {
- const el=id=>document.getElementById(id), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- let snapshot=null, account=null, busy=false, generation=0;
- const labels={developer:'Developer',admin:'Admin',moderator:'Moderador',user:'Utilizador',receive:'Entrada',consume:'Consumo',replenish:'Reposição'};
- const can=a=>snapshot?.permissions.includes(a);
- async function rpc(name,args={}) {
-  if(!client||!session) throw Error('Inicia sessão no projeto Gestock configurado para gerir stocks.');
-  const {data,error}=await client.rpc('gestock_'+name,args);
-  if(error) throw Error(['PGRST202','42883'].includes(error.code)?'Módulo de stocks não instalado no servidor. Consulta GESTOCK.md.':error.message);
-  return data;
+ const $=id=>document.getElementById(id), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const names={read:'Consultar materiais',receive:'Registar entradas',consume:'Registar saídas',replenish:'Repor o Posto Médico',products:'Adicionar materiais',targets:'Definir quantidades obrigatórias',reports:'Gerar relatórios'};
+ const roles={developer:'Developer',admin:'Administrador',moderator:'Moderador',user:'Utilizador'};
+ let data=null,page='medical',busy=false,generation=0,actor=null,cart=[],request=crypto.randomUUID(),imageURLs=new Map();
+ const manager=()=>['developer','admin'].includes(data?.role),can=a=>data?.permissions.includes(a),product=id=>data.products.find(p=>p.id===id);
+ async function rpc(name,args={}){if(!client||!session)throw Error('Inicia sessão para continuar.');const r=await client.rpc('gestock_'+name,args);if(r.error)throw Error(r.error.message);return r.data;}
+ function photo(p){return imageURLs.has(p.id)?`<img class="material-thumb" src="${esc(imageURLs.get(p.id))}" alt="">`:'<span class="material-thumb placeholder" aria-hidden="true">▧</span>';}
+ function quantity(name='p_quantity',zero=false){return `<label class="quantity-field">Quantidade<input name="${name}" class="quantity-input" type="text" inputmode="numeric" pattern="[0-9]{1,3}" maxlength="3" required ${zero?'data-zero="true"':''} autocomplete="off" aria-label="Quantidade, máximo 3 dígitos"></label>`;}
+ function picker(){return `<div class="material-picker"><label>Nome do material<input type="search" data-product-search autocomplete="off" placeholder="Escreve para pesquisar…" required aria-autocomplete="list" aria-expanded="false"></label><input type="hidden" name="p_product"><div class="material-suggestions" role="listbox" aria-label="Materiais sugeridos" hidden></div><p class="selection-hint">Seleciona um dos materiais sugeridos.</p></div>`;}
+ function table(headers,rows){return `<div class="stock-scroll"><table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.join('')||`<tr><td colspan="${headers.length}">Sem registos.</td></tr>`}</tbody></table></div>`;}
+ function tabButtons(){return `<div class="stock-tabs">${[['medical','🏥 Posto Médico',true],['warehouse','📦 Armazém de Saúde',data.role!=='user'],['movements','↔ Movimentos',can('reports')],['reports','📋 Relatórios',can('reports')],['manage','⚙ Gestão de stocks',manager()]].filter(x=>x[2]).map(([p,label])=>`<button class="btn ${page===p?'btn-primary':'btn-secondary'}" type="button" data-page="${p}" aria-pressed="${page===p}">${label}</button>`).join('')}</div>`;}
+ function render(){
+  const s=data;$('stockStatus').textContent=roles[s.role];
+  let body='';
+  if(page==='medical'){
+   body=`<h3>Dar saída de material</h3><p>Uma saída corresponde a um único veículo. Adiciona os materiais e confirma a saída.</p>`;
+   if(can('consume')) body+=`<form id="issueForm"><fieldset class="vehicle-checklist"><legend>Seleciona um veículo</legend>${s.vehicles.map(v=>`<label class="vehicle-choice"><input type="radio" name="vehicle" value="${esc(v.id)}" required><span>${esc(v.name)}</span></label>`).join('')||'<p>Não há veículos disponíveis. Contacta um administrador.</p>'}</fieldset><div class="issue-picker-row">${picker()}${quantity('quantity')}<button type="button" class="btn" data-add-cart>Adicionar à saída</button></div><div id="issueCart">${cartHTML()}</div><button type="submit" class="btn btn-primary" ${!s.vehicles.length?'disabled':''}>Confirmar saída</button></form>`;
+   else body+='<p>O teu perfil não tem permissão para registar saídas.</p>';
+   if(s.role!=='user')body+=inventory('medical');
+  }else if(page==='warehouse'){
+   body='<h3>Armazém de Saúde</h3>';
+   if(can('receive'))body+=`<h3>Entrada de material</h3><form data-operation="transfer">${picker()}<input type="hidden" name="p_kind" value="receive"><label>Lote<input name="p_lot" maxlength="120" required></label><label>Validade<input name="p_expiry" type="date" required></label>${quantity()}<button class="btn btn-primary">Registar entrada</button></form>`;
+   if(can('replenish'))body+=`<h3>Reposição do Posto Médico</h3><form data-operation="transfer">${picker()}<input type="hidden" name="p_kind" value="replenish">${quantity()}<button class="btn btn-primary">Registar reposição</button></form>`;
+   body+=inventory('central');
+  }else if(page==='reports'){
+   body=`<h3>Relatórios PDF</h3><p>Listas de conferência com materiais, quantidades e espaço de verificação.</p><form id="pdfReportForm"><label>Relatório<select name="kind"><option value="consume">Saídas de material</option><option value="replenish">Reposições efetuadas</option><option value="medical">Stock do Posto Médico</option><option value="inventory">Inventário do Armazém de Saúde</option><option value="receive">Entradas de material</option></select></label><label>Desde<input type="date" name="start"></label><label>Até<input type="date" name="end"></label><button class="btn btn-primary">Gerar PDF</button><p class="report-period-note">O período aplica-se a movimentos; os relatórios de stock mostram a quantidade atual.</p></form>`;
+  }else if(page==='movements'){
+   body='<h3>Movimentos registados</h3>'+table(['Data','Operação','Material','Quantidade'],s.movements.map(m=>{const b=s.batches.find(b=>b.id===m.batch_id),p=product(b?.product_id);return `<tr><td>${esc(new Date(m.created_at).toLocaleString('pt-PT'))}</td><td>${esc({consume:'Saída',receive:'Entrada',replenish:'Reposição'}[m.kind])}</td><td>${esc(p?.name||'Material')}</td><td>${m.quantity}</td></tr>`;}));
+  }else if(page==='manage'){
+   body='<h3>Gestão de itens</h3>';
+   if(s.role==='developer')body+=`<form data-operation="product"><label>Nome<input name="p_name" maxlength="120" required></label><label>Marca<input name="p_brand" maxlength="120" required></label><button class="btn btn-primary">Adicionar item</button></form>`;
+   body+=`<div class="stock-product-list">${s.products.map(p=>`<div class="product-management-row">${photo(p)}<div><strong>${esc(p.name)}</strong><small>${esc(p.brand)}</small></div><button type="button" class="btn btn-secondary" data-edit-product="${esc(p.id)}">Editar / imagem</button></div>`).join('')||'<p>Ainda não existem materiais.</p>'}</div><div id="productEditor"></div>`;
+   if(can('targets'))body+=`<h3>Quantidade obrigatória no Posto Médico</h3><form data-operation="target">${picker()}${quantity('p_target',true)}<button class="btn btn-primary">Guardar quantidade</button></form>`;
+   if(s.role==='developer')body+=`<h3>Permissões por cargo</h3>${table(['Permissão','Administrador','Moderador','Utilizador'],Object.entries(names).map(([a,label])=>`<tr><td>${label}</td>${['admin','moderator','user'].map(r=>{const fixed=a==='products'||(r==='user'&&['receive','replenish','reports','targets'].includes(a))||(a==='targets'&&r!=='admin');return `<td><input type="checkbox" data-permission="${a}" data-role="${r}" aria-label="${esc(roles[r]+' - '+label)}" ${!fixed&&s.matrix.some(p=>p.role===r&&p.action===a)?'checked':''} ${fixed?'disabled':''}></td>`;}).join('')}</tr>`))}<p>Adicionar materiais é exclusivo do Developer. A gestão de veículos e imagens é exclusiva de administradores.</p>`;
+  }
+  $('stockContent').innerHTML=tabButtons()+body;
+  if(page==='medical')for(const input of document.querySelectorAll('#issueForm [data-product-search],#issueForm [name=quantity]'))input.required=false;
  }
- const options=()=>snapshot.products.map(p=>`<option value="${esc(p.id)}">${esc(p.name)} · ${esc(p.brand)}</option>`).join('');
- function render() {
-  const s=snapshot, product=id=>s.products.find(p=>p.id===id), productName=id=>{const p=product(id);return p?`${p.name} · ${p.brand}`:id;};
-  el('stockStatus').textContent=`${labels[s.role]} · Posto Médico e Armazém de Saúde`;
-  const batchOptions=s.batches.map(b=>`<option value="${esc(b.id)}">${esc(productName(b.product_id))} · ${esc(b.lot)} · ${esc(b.expiry)} · Saúde ${b.central} / Posto ${b.medical}</option>`).join('');
-  el('stockContent').innerHTML=`<button type="button" class="btn" data-refresh>Atualizar</button>
-  <h3>Inventário por lote</h3><label>Pesquisar produto<input type="search" id="stockSearch"></label>
-  <div class="stock-scroll"><table><thead><tr><th>Produto / marca</th><th>Lote</th><th>Validade</th><th>Armazém de Saúde</th><th>Posto Médico</th></tr></thead><tbody id="stockRows">${s.batches.map(b=>`<tr><td>${esc(productName(b.product_id))}</td><td>${esc(b.lot)}</td><td>${esc(b.expiry)}</td><td>${b.central}</td><td>${b.medical}</td></tr>`).join('')}</tbody></table></div>
-  <h3>Necessidades do Posto Médico</h3>${s.products.map(p=>{const total=s.batches.filter(b=>b.product_id===p.id&&b.expiry>=new Date().toLocaleDateString('sv-SE')).reduce((n,b)=>n+b.medical,0);return `<p>${esc(p.name)} · ${esc(p.brand)}: ${total} válidos / obrigatório ${p.target} · repor ${Math.max(0,p.target-total)}</p>`;}).join('')}
-  ${can('products')?`<h3>Novo produto</h3><form data-operation="product"><label>Nome<input name="p_name" required maxlength="120"></label><label>Marca<input name="p_brand" required maxlength="120"></label><button class="btn">Guardar produto</button></form>`:''}
-  ${can('targets')?`<h3>Quantidade obrigatória</h3><form data-operation="target"><label>Produto<select name="p_product" required>${options()}</select></label><label>Quantidade<input name="p_target" type="number" min="0" step="1" required></label><button class="btn">Guardar quantidade</button></form>`:''}
-  ${can('receive')?`<h3>Entrada no Armazém de Saúde</h3><form data-operation="move"><input name="p_kind" value="receive" type="hidden"><label>Produto<select name="p_product" required>${options()}</select></label><label>Lote<input name="p_lot" required maxlength="120"></label><label>Validade<input name="p_expiry" type="date" required></label><label>Quantidade<input name="p_quantity" type="number" min="1" step="1" required></label><button class="btn">Registar entrada</button></form>`:''}
-  ${['consume','replenish'].filter(can).map(kind=>`<h3>${kind==='consume'?'Consumo do Posto Médico':'Reposição: Armazém de Saúde → Posto Médico'}</h3><form data-operation="move"><input name="p_kind" type="hidden" value="${kind}"><label>Produto e lote<select name="p_batch" required>${batchOptions}</select></label><label>Quantidade<input name="p_quantity" type="number" min="1" step="1" required></label><button class="btn">Registar ${labels[kind].toLowerCase()}</button></form>`).join('')}
-  ${can('reports')?`<h3>Relatórios CSV</h3><p>Incluem identificador do movimento, autor e data UTC. Inventário inclui lotes expirados.</p>${['inventory','receive','replenish','consume'].map(k=>`<button type="button" class="btn" data-report="${k}">${k==='inventory'?'Inventário':labels[k]}</button>`).join('')}`:''}
-  ${s.role==='developer'?`<h3>Administração Gestock · Developer</h3><p>As permissões do catálogo herdado permanecem na administração original. O Developer é provisionado exclusivamente no servidor.</p><form data-operation="set_role"><label>UUID da conta existente<input name="p_user" required pattern="[0-9a-fA-F-]{36}"></label><label>Papel<select name="p_role"><option value="admin">Admin</option><option value="moderator">Moderador</option><option value="user">Utilizador</option></select></label><button class="btn">Atribuir papel</button></form><div class="stock-scroll"><table><thead><tr><th>Permissão</th><th>Admin</th><th>Moderador</th><th>Utilizador</th></tr></thead><tbody>${['read','receive','consume','replenish','products','targets','reports'].map(a=>`<tr><td>${esc(a)}</td>${['admin','moderator','user'].map(r=>`<td><input type="checkbox" aria-label="${r} ${a}" data-permission="${a}" data-role="${r}" ${s.matrix.some(p=>p.role===r&&p.action===a)?'checked':''} ${r==='user'&&['receive','replenish'].includes(a)?'disabled':''}></td>`).join('')}</tr>`).join('')}</tbody></table></div>`:''}`;
-  el('stockSearch').addEventListener('input',e=>{for(const row of el('stockRows').rows)row.hidden=!row.textContent.toLocaleLowerCase('pt').includes(e.target.value.toLocaleLowerCase('pt'));});
- }
- async function load() {
-  const ticket=++generation, user=session?.user.id;
-  el('stockStatus').textContent='A carregar…';el('stockContent').replaceChildren();snapshot=null;
-  try { const data=await rpc('snapshot');if(ticket!==generation||session?.user.id!==user)return;snapshot=data;account=user;render(); }
-  catch(e){if(ticket===generation)el('stockStatus').textContent=e.message;}
- }
- function exportReport(kind) {
-  if(!can('reports'))return;
-  const s=snapshot, p=id=>s.products.find(x=>x.id===id)||{}, b=id=>s.batches.find(x=>x.id===id)||{};
-  let rows;
-  if(kind==='inventory')rows=[['produto','marca','lote','validade','armazem_saude','posto_medico','obrigatorio_produto'],...s.batches.map(x=>[p(x.product_id).name,p(x.product_id).brand,x.lot,x.expiry,x.central,x.medical,p(x.product_id).target])];
-  else rows=[['movimento','data_utc','autor_uuid','produto','marca','lote','validade','quantidade'],...s.movements.filter(m=>m.kind===kind).map(m=>{const batch=b(m.batch_id),prod=p(batch.product_id);return[m.id,m.created_at,m.actor,prod.name,prod.brand,batch.lot,batch.expiry,m.quantity];})];
-  const csv=rows.map(row=>row.map(v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"').join(';')).join('\r\n');
-  const url=URL.createObjectURL(new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`GESTOCK-${kind}-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
- }
- el('openStock').addEventListener('click',()=>{el('stockDialog').showModal();load();});
- el('closeStock').addEventListener('click',()=>el('stockDialog').close());
- el('stockDialog').addEventListener('close',()=>{generation++;snapshot=null;el('stockContent').replaceChildren();});
- el('stockContent').addEventListener('click',e=>{if(e.target.closest('[data-refresh]')&&!busy)load();const button=e.target.closest('[data-report]');if(button)exportReport(button.dataset.report);});
- async function mutate(operation,args) {
-  if(busy)return;busy=true;const ticket=generation,user=session?.user.id;
-  for(const node of el('stockContent').querySelectorAll('button,input,select'))node.disabled=true;
-  try { await rpc(operation,args);if(ticket===generation&&session?.user.id===user)await load(); }
-  catch(e) { if(ticket===generation){el('stockStatus').textContent=e.message;for(const node of el('stockContent').querySelectorAll('button,input,select'))node.disabled=false;} }
-  finally {busy=false;}
- }
- el('stockContent').addEventListener('submit',e=>{e.preventDefault();const form=e.target,args=Object.fromEntries(new FormData(form));for(const k of ['p_quantity','p_target'])if(k in args)args[k]=Number(args[k]);mutate(form.dataset.operation,args);});
- el('stockContent').addEventListener('change',e=>{if(e.target.dataset.permission)mutate('set_permission',{p_role:e.target.dataset.role,p_action:e.target.dataset.permission,p_enabled:e.target.checked});});
- setInterval(()=>{if(el('stockDialog').open&&account&&session?.user.id!==account){generation++;snapshot=null;account=null;el('stockContent').replaceChildren();el('stockStatus').textContent='Sessão terminada. Abre novamente após iniciar sessão.';}},500);
+ function cartHTML(){return table(['Material','Marca','Quantidade',''],cart.map(line=>{const p=product(line.product);return `<tr><td>${photo(p)} ${esc(p.name)}</td><td>${esc(p.brand)}</td><td>${line.quantity}</td><td><button type="button" class="btn btn-secondary" data-remove-cart="${esc(p.id)}" aria-label="Remover ${esc(p.name)}">Remover</button></td></tr>`;}));}
+ function inventory(where){return '<h3>'+ (where==='medical'?'Stock do Posto Médico':'Inventário por lote')+'</h3>'+table(['Material','Marca','Lote','Validade','Quantidade'],data.batches.map(b=>{const p=product(b.product_id);return `<tr><td>${photo(p)} ${esc(p?.name)}</td><td>${esc(p?.brand)}</td><td>${esc(b.lot)}</td><td>${esc(b.expiry)}</td><td>${b[where]}</td></tr>`;}));}
+ async function load(){const ticket=++generation,id=session?.user.id;$('stockStatus').textContent='A carregar…';try{
+  const s=await rpc('snapshot');if(ticket!==generation||session?.user.id!==id)return;data=s;actor=id;imageURLs.clear();
+  await Promise.all(s.products.filter(p=>p.image_path).map(async p=>{const r=await client.storage.from('gestock-images').createSignedUrl(p.image_path,600);if(!r.error)imageURLs.set(p.id,r.data.signedUrl);}));
+  if(ticket!==generation||session?.user.id!==id)return;
+  if(page==='manage'&&!manager()||['reports','movements'].includes(page)&&!can('reports')||page==='warehouse'&&s.role==='user')page='medical';render();
+ }catch(e){if(ticket===generation)$('stockStatus').textContent=e.message;}}
+ async function show(p='medical'){page=p;if(!$('stockDialog').open)$('stockDialog').showModal();await load();}
+ async function run(operation,args,message){if(busy)return;busy=true;const id=session?.user.id;const buttons=[...$('stockContent').querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);try{await rpc(operation,args);if(id!==session?.user.id)return;if(operation==='issue'){cart=[];request=crypto.randomUUID();}await load();$('stockStatus').textContent=message;notify(message,'success');}catch(e){$('stockStatus').textContent=e.message;buttons.filter(b=>b.isConnected).forEach(b=>b.disabled=false);}finally{busy=false;}}
+ function selected(form){const id=form.querySelector('[name=p_product]')?.value,text=form.querySelector('[data-product-search]');const p=product(id);if(!p||text?.value!==p.name+' · '+p.brand)throw Error('Clica num dos materiais sugeridos.');return p.id;}
+ function readQuantity(input,zero=false){if(!/^[0-9]{1,3}$/.test(input.value)||Number(input.value)<(zero?0:1))throw Error('A quantidade deve ser um número '+(zero?'entre 0':'entre 1')+' e 999.');return Number(input.value);}
+ $('openStock').addEventListener('click',()=>show('manage'));
+ for(const [id,p] of [['openMedical','medical'],['openWarehouse','warehouse'],['openReports','reports'],['openMovements','movements']])document.addEventListener('click',e=>{if(e.target.closest('#'+id))show(p);});
+ $('closeStock').addEventListener('click',()=>{if(!busy)$('stockDialog').close();});
+ $('stockDialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
+ $('stockDialog').addEventListener('close',()=>{generation++;data=null;imageURLs.clear();$('stockContent').replaceChildren();});
+ $('stockContent').addEventListener('input',e=>{
+  const input=e.target;if(input.classList.contains('quantity-input'))input.value=input.value.replace(/\D/g,'').slice(0,3);
+  if(!input.matches('[data-product-search]'))return;
+  const box=input.closest('.material-picker'),list=box.querySelector('.material-suggestions');box.querySelector('[name=p_product]').value='';box.querySelector('.selection-hint').textContent='Seleciona um dos materiais sugeridos.';
+  const q=input.value.trim().toLocaleLowerCase('pt');const matches=q?data.products.filter(p=>(p.name+' '+p.brand).toLocaleLowerCase('pt').includes(q)).slice(0,12):[];
+  list.innerHTML=matches.map(p=>`<button type="button" role="option" data-pick="${esc(p.id)}">${photo(p)}<span><strong>${esc(p.name)}</strong><small>${esc(p.brand)}</small></span></button>`).join('')||'<p>Sem materiais encontrados.</p>';list.hidden=!q;input.setAttribute('aria-expanded',String(Boolean(q)));
+ });
+ $('stockContent').addEventListener('click',async e=>{try{
+  const pick=e.target.closest('[data-pick]');if(pick){const box=pick.closest('.material-picker'),p=product(pick.dataset.pick);box.querySelector('[name=p_product]').value=p.id;box.querySelector('[data-product-search]').value=p.name+' · '+p.brand;box.querySelector('[data-product-search]').setAttribute('aria-expanded','false');box.querySelector('.material-suggestions').hidden=true;box.querySelector('.selection-hint').textContent='Material selecionado.';return;}
+  const tab=e.target.closest('[data-page]');if(tab&&!busy){page=tab.dataset.page;render();return;}
+  if(e.target.closest('[data-add-cart]')){const form=$('issueForm'),id=selected(form),q=readQuantity(form.querySelector('[name=quantity]'));if(cart.some(l=>l.product===id))throw Error('O material já está nesta saída. Remove-o para alterar a quantidade.');cart.push({product:id,quantity:q});$('issueCart').innerHTML=cartHTML();$('stockStatus').textContent=roles[data.role];form.querySelector('.selection-hint').textContent='Seleciona um dos materiais sugeridos.';form.querySelector('[name=p_product]').value='';form.querySelector('[data-product-search]').value='';form.querySelector('[name=quantity]').value='';return;}
+  const remove=e.target.closest('[data-remove-cart]');if(remove){cart=cart.filter(l=>l.product!==remove.dataset.removeCart);$('issueCart').innerHTML=cartHTML();return;}
+  const edit=e.target.closest('[data-edit-product]');if(edit&&manager()){const p=product(edit.dataset.editProduct);$('productEditor').innerHTML=`<h3>Editar ${esc(p.name)}</h3><form id="productEditForm"><input type="hidden" name="id" value="${esc(p.id)}"><label>Nome<input name="name" value="${esc(p.name)}" required maxlength="120"></label><label>Marca<input name="brand" value="${esc(p.brand)}" required maxlength="120"></label><label>Mini imagem (PNG, JPG ou WebP, até 3 MB)<input type="file" name="image" accept="image/png,image/jpeg,image/webp"></label><label class="inline-check"><input type="checkbox" name="remove">Remover imagem</label><button class="btn btn-primary">Guardar alterações</button></form>`;$('productEditor').scrollIntoView({block:'nearest'});}
+ }catch(err){$('stockStatus').textContent=err.message;}});
+ $('stockContent').addEventListener('submit',async e=>{e.preventDefault();if(busy)return;const f=e.target;try{
+  if(f.id==='issueForm'){if(!cart.length)throw Error('Adiciona pelo menos um material à saída.');const v=f.querySelector('[name=vehicle]:checked');if(!v)throw Error('Seleciona um único veículo.');await run('issue',{p_vehicle:v.value,p_lines:cart,p_request:request},'Saída registada com sucesso.');return;}
+  if(f.id==='pdfReportForm'){busy=true;try{const fd=new FormData(f);const report=await rpc('report',{p_kind:fd.get('kind'),p_start:fd.get('start')||null,p_end:fd.get('end')||null});const r=await window.spawnVault.saveReport(report);$('stockStatus').textContent=r.cancelled?'Exportação cancelada.':'Relatório PDF guardado.';}finally{busy=false;}return;}
+  if(f.id==='productEditForm'){busy=true;let uploaded=null;try{const fd=new FormData(f),p=product(fd.get('id')),file=fd.get('image');let img=fd.get('remove')?null:p.image_path;
+   if(file?.size){if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>3145728)throw Error('Imagem inválida. Máximo 3 MB.');uploaded=session.user.id+'/'+crypto.randomUUID()+'.'+({ 'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[file.type]);const up=await client.storage.from('gestock-images').upload(uploaded,file,{contentType:file.type,upsert:false});if(up.error)throw up.error;img=uploaded;}
+   await rpc('product_edit',{p_product:p.id,p_name:fd.get('name'),p_brand:fd.get('brand'),p_image:img});uploaded=null;await load();$('stockStatus').textContent='Item atualizado.';
+  }catch(err){if(uploaded)await client.storage.from('gestock-images').remove([uploaded]);throw err;}finally{busy=false;}return;}
+  const operation=f.dataset.operation,args=Object.fromEntries(new FormData(f));if(['transfer','target'].includes(operation))args.p_product=selected(f);
+  for(const k of ['p_quantity','p_target'])if(k in args)args[k]=readQuantity(f.querySelector('[name='+k+']'),k==='p_target');
+  await run(operation,args,operation==='transfer'?(args.p_kind==='receive'?'Entrada registada com sucesso.':'Reposição registada com sucesso.'):'Alteração guardada.');
+ }catch(err){$('stockStatus').textContent=err.message;}});
+ $('stockContent').addEventListener('change',async e=>{if(e.target.dataset.permission){const input=e.target;await run('set_permission',{p_role:input.dataset.role,p_action:input.dataset.permission,p_enabled:input.checked},'Permissões guardadas.');if(data)render();}});
+ async function vehicles(){const s=await rpc('snapshot');const host=$('adminVehiclesPanel');host.innerHTML=`<h3>Veículos</h3><form id="vehicleForm"><input type="hidden" name="id"><label>Designação<input name="name" required maxlength="80" placeholder="Ex.: ABSC 01"></label><button class="btn btn-primary">Guardar veículo</button></form><div>${s.vehicles.map(v=>`<div class="vehicle-admin-row"><strong>${esc(v.name)}</strong><button class="btn btn-secondary" data-vehicle-edit="${esc(v.id)}" data-vehicle-name="${esc(v.name)}">Editar</button><button class="btn btn-secondary" data-vehicle-delete="${esc(v.id)}">Eliminar</button></div>`).join('')||'<p>Sem veículos registados.</p>'}</div>`;}
+ document.addEventListener('admin-tab-selected',e=>{if(e.target.id==='adminVehiclesTab')vehicles().catch(e=>notify(e.message));});
+ document.addEventListener('submit',async e=>{if(e.target.id!=='vehicleForm')return;e.preventDefault();if(busy)return;busy=true;try{const fd=new FormData(e.target);await rpc('vehicle',{p_name:fd.get('name'),p_id:fd.get('id')||null});await vehicles();notify('Veículo guardado.','success');}catch(e){notify(e.message);}finally{busy=false;}});
+ document.addEventListener('click',async e=>{const edit=e.target.closest('[data-vehicle-edit]'),del=e.target.closest('[data-vehicle-delete]');if(edit){const f=$('vehicleForm');f.elements.id.value=edit.dataset.vehicleEdit;f.elements.name.value=edit.dataset.vehicleName;}if(del&&!busy&&confirm('Eliminar este veículo da lista? O histórico de saídas será preservado.')){busy=true;try{await rpc('vehicle',{p_name:'',p_id:del.dataset.vehicleDelete,p_delete:true});await vehicles();}catch(err){notify(err.message);}finally{busy=false;}}});
+ window.GestockInventory={open:show};
+ setInterval(()=>{if(actor&&session?.user.id!==actor){generation++;actor=null;data=null;cart=[];request=crypto.randomUUID();imageURLs.clear();if($('stockDialog').open)$('stockDialog').close();}},500);
 })();

@@ -1,0 +1,46 @@
+const {PGlite}=require('@electric-sql/pglite');const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const db=new PGlite();const ids={dev:'10000000-0000-4000-8000-000000000001',admin:'10000000-0000-4000-8000-000000000002',user:'10000000-0000-4000-8000-000000000003',mod:'10000000-0000-4000-8000-000000000004'};
+async function as(who,sql,args=[]){await db.exec('set role authenticated');try{await db.query("select set_config('request.jwt.claim.sub',$1,false)",[ids[who]]);return(await db.query(sql,args)).rows;}finally{await db.exec('reset role');}}
+const deny=async(who,sql,args=[])=>assert.rejects(()=>as(who,sql,args));
+(async()=>{try{
+await db.exec(`create role anon;create role authenticated;create schema auth;create schema storage;
+create table auth.users(id uuid primary key,email text);create table public.item_audit(actor_id uuid,actor_email text,action text,item_name text);create table public.user_roles(user_id uuid primary key references auth.users,role text);create table public.spawnvault_accounts(user_id uuid primary key,username text);create table public.spawnvault_user_access(user_id uuid primary key,blocked boolean);
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+create function public.spawnvault_is_blocked() returns boolean language sql security definer as $$select exists(select 1 from public.spawnvault_user_access where user_id=auth.uid() and blocked)$$;
+create table public.items(id uuid primary key default gen_random_uuid());alter table public.items enable row level security;grant insert on public.items to authenticated;create policy test_permissive on public.items for insert to authenticated with check(true);
+create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
+grant usage on schema public,auth,storage to anon,authenticated;`);
+await db.exec(fs.readFileSync(path.join(__dirname,'supabase/migration_gestock_v1.sql'),'utf8'));
+const migration=fs.readdirSync(path.join(__dirname,'supabase/migrations')).find(p=>p.endsWith('_gestock_v110.sql'));await db.exec(fs.readFileSync(path.join(__dirname,'supabase/migrations',migration),'utf8'));
+for(const [who,id]of Object.entries(ids)){await db.query('insert into auth.users(id) values($1)',[id]);await db.query('insert into public.user_roles values($1,$2)',[id,who==='dev'?'admin':who==='mod'?'moderator':who]);await db.query('insert into public.spawnvault_accounts values($1,$2)',[id,who]);}
+await db.query('insert into public.gestock_owner(user_id) values($1)',[ids.dev]);
+const p=(await as('dev',"select gestock_product('Compressas','Marca') id"))[0].id;
+const p2=(await as('dev',"select gestock_product('Luvas','Marca') id"))[0].id;
+await deny('admin',"select gestock_product('Não','Permitido')");await deny('mod','insert into public.items default values');await as('dev','insert into public.items default values');
+await deny('user',"select gestock_vehicle('ABSC 01')");const v=(await as('admin',"select gestock_vehicle('ABSC 01') id"))[0].id;const v2=(await as('admin',"select gestock_vehicle('ABSC 02') id"))[0].id;
+await as('admin',"select gestock_transfer('receive',$1,20,'L1','2099-12-31')",[p]);await as('admin',"select gestock_transfer('receive',$1,10,'L2','2099-11-30')",[p]);await as('mod',"select gestock_transfer('replenish',$1,15)",[p]);
+await deny('user',"select gestock_move('consume',1,(select null::uuid))");
+const lines=[{product:p,quantity:3}],req='30000000-0000-4000-8000-000000000001';
+await deny('user','select gestock_issue(null,$1,$2)',[JSON.stringify(lines),req]);
+const issue=(await as('user','select gestock_issue($1,$2,$3) id',[v,JSON.stringify(lines),req]))[0].id;
+assert.equal((await as('user','select gestock_issue($1,$2,$3) id',[v,JSON.stringify(lines),req]))[0].id,issue);
+await deny('user','select gestock_issue($1,$2,$3)',[v2,JSON.stringify(lines),req]);
+assert.equal((await db.query('select sum(medical)::int n from gestock_batches')).rows[0].n,12);
+assert.equal((await db.query('select count(*)::int n from gestock_issues')).rows[0].n,1);
+const before=(await db.query('select sum(medical)::int n from gestock_batches')).rows[0].n;
+await deny('user','select gestock_issue($1,$2,gen_random_uuid())',[v,JSON.stringify([{product:p,quantity:1},{product:p2,quantity:1}])]);
+assert.equal((await db.query('select sum(medical)::int n from gestock_batches')).rows[0].n,before);
+for(const quantity of [0,1000,1.5])await deny('user','select gestock_issue($1,$2,gen_random_uuid())',[v,JSON.stringify([{product:p,quantity}])]);
+await deny('admin',"select gestock_transfer('receive',$1,1000,'X','2099-12-31')",[p]);
+const snapshot=(await as('user','select gestock_snapshot() s'))[0].s;assert.equal(snapshot.batches.length,0);assert.equal(snapshot.movements.length,0);assert.equal(snapshot.products[0].target,null);
+await deny('user',"select gestock_report('consume')");
+const report=(await as('admin',"select gestock_report('consume') r"))[0].r;assert.equal(report.rows.length,1);assert.equal(report.rows[0].vehicle,'ABSC 01');assert.equal(report.rows[0].quantity,3);
+await as('admin',"select gestock_vehicle('',$1,true)",[v]);await deny('user','select gestock_issue($1,$2,gen_random_uuid())',[v,JSON.stringify(lines)]);
+assert.equal((await as('admin',"select gestock_report('consume') r"))[0].r.rows[0].vehicle,'ABSC 01');
+await assert.rejects(()=>db.query("update user_roles set role='user' where user_id=$1",[ids.dev]));
+await assert.rejects(()=>db.query('insert into spawnvault_user_access values($1,true)',[ids.dev]));
+await deny('user','select gestock_product_edit($1,$2,$3,null)',[p,'Outro','Marca']);
+await db.query('insert into spawnvault_user_access values($1,true)',[ids.admin]);await deny('admin',"select gestock_vehicle('Bloqueado')");
+await deny('admin',"select gestock_set_role($1,'moderator')",[ids.user]);await deny('dev',"select gestock_set_role($1,'developer')",[ids.user]);await as('dev',"select gestock_set_role($1,'moderator')",[ids.user]);assert.equal((await as('user','select gestock_role() r'))[0].r,'moderator');
+console.log('Gestock 1.1 SQL passed: single vehicle, atomic basket, FEFO, idempotency, 3-digit limits, roles, stock privacy and PDF report data.');
+}finally{await db.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

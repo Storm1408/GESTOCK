@@ -62,3 +62,18 @@ const updates = createUpdateService({
  setProgress:value=>BrowserWindow.getAllWindows().forEach(win=>{if(!win.isDestroyed())win.setProgressBar(value);})
 });
 ipcMain.handle('updates:check',()=>updates.check({manual:true}));
+
+// Reports are built from escaped structured data in the main process.
+ipcMain.handle('reports:save',async(event,report)=>{
+ const {fileURLToPath}=require('node:url');
+ if(!event.senderFrame||!event.senderFrame.url.startsWith('file:')||path.resolve(fileURLToPath(event.senderFrame.url))!==path.resolve(__dirname,'index.html'))throw Error('Origem inválida.');
+ const {buildReportHTML}=require('./reports');const fs=require('node:fs/promises');
+ const logo='data:image/png;base64,'+(await fs.readFile(path.join(__dirname,'assets/identity/gestock-logo-refined-dark.png'))).toString('base64');
+ const html=buildReportHTML(report,logo);
+ const result=await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender),{title:'Guardar relatório PDF',defaultPath:'Gestock-'+report.kind+'-'+new Date().toISOString().slice(0,10)+'.pdf',filters:[{name:'PDF',extensions:['pdf']}]});
+ if(result.canceled||!result.filePath)return {cancelled:true};
+ const output=new BrowserWindow({show:false,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});
+ try{output.webContents.setWindowOpenHandler(()=>({action:'deny'}));await output.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(html));await output.webContents.executeJavaScript('Promise.all([...document.images].map(i=>i.decode().catch(()=>{})))');
+ const pdf=await output.webContents.printToPDF({printBackground:true,preferCSSPageSize:true,displayHeaderFooter:true,headerTemplate:'<span></span>',footerTemplate:'<div style="font-size:8px;color:#65735b;width:100%;padding:0 45px;display:flex;justify-content:space-between"><span>Developer: HVVLF | Todos os direitos reservados aos Bombeiros Voluntários de Montijo ©</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>'});
+ await fs.writeFile(result.filePath,pdf);return {cancelled:false};}finally{output.destroy();}
+});
