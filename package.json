@@ -1,6 +1,6 @@
 {
   "name": "gestock",
-  "version": "1.3.2",
+  "version": "1.4.0",
   "description": "Gestão de stocks do Posto Médico e Armazém de Saúde",
   "main": "main.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "dev": "electron .",
     "configure-updates": "node scripts/configure-updates.cjs",
     "check": "node scripts/check-source.cjs",
-    "test": "node tests-updates.cjs && node tests-moderation.cjs && node tests-accounts.cjs && node tests-accounts-server.cjs && node tests-gestock.cjs && node tests-sync.cjs && node tests-v110.cjs && node tests-lookup-reports.cjs && node tests-v120.cjs && node tests-v120-integration.cjs && node tests-v130.cjs",
+    "test": "node tests-updates.cjs && node tests-moderation.cjs && node tests-accounts.cjs && node tests-accounts-server.cjs && node tests-gestock.cjs && node tests-sync.cjs && node tests-v110.cjs && node tests-lookup-reports.cjs && node tests-v120.cjs && node tests-v120-integration.cjs && node tests-v130.cjs && node tests-v140.cjs",
     "verify-release": "node scripts/verify-release.cjs"
   },
   "devDependencies": {

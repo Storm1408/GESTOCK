@@ -1,3 +1,7 @@
+## Gestock 1.4.0
+
+Lotes agrupados por material e remoção de um lote apenas no local escolhido, com motivo e auditoria. No Posto Médico, acesso mínimo de Moderador; no Armazém de Saúde, Administrador. Lotes sem quantidade deixam automaticamente de aparecer no inventário ativo e nos relatórios de stock, preservando o histórico das operações. Histórico pessoal com uma linha por saída e botão de detalhes. Dashboard corrigida no primeiro login. Gestão de stocks renomeada para Gestão de Material, sem quantidades obrigatórias; opções individuais na barra lateral, com as permissões anteriores e eliminação de lotes configurável pelo Developer dentro dos cargos mínimos.
+
 ## Gestock 1.3.2
 
 Correção da identidade e dos ícones Windows: o logótipo inclui as resoluções usadas pelo menu Iniciar, pesquisa e barra de tarefas. A aplicação declara o mesmo AppID do instalador e a atualização renova os ícones dos atalhos existentes. Mantém o nome Gestock, o instalador Gestock.exe e a versão no canto inferior direito.

@@ -6,14 +6,15 @@
  function button(id,text,key){const b=document.createElement('button');b.type='button';b.id=id;b.className='nav-item';b.innerHTML=icon(key)+'<span>'+text+'</span>';return b;}
  const medical=button('openMedical','Posto Médico','medical'),warehouse=button('openWarehouse','Armazém de Saúde','warehouse'),reports=button('openReports','Relatórios','reports'),movements=button('openMovements','Movimentos','movements');
  const receive=button('openReceive','Entrada de material','receive'),replenish=button('openReplenish','Reposição do Posto Médico','replenish');
+ const addMaterial=button('openAddMaterial','Adicionar material','medical');
  const history=button('openHistory','Histórico','history'),permissions=button('openPermissions','Gestor de permissões','permissions');
  const heading=(id,text)=>{const d=document.createElement('div');d.className='side-label';d.id=id;d.textContent=text;return d;};
  const brand=sidebar.querySelector('.brand'),bottom=sidebar.querySelector('.sidebar-bottom');
  const library=heading('libraryLabel','Biblioteca'),moderation=heading('moderationLabel','Moderação'),admin=heading('administrationLabel','Administração'),updates=heading('updatesLabel','Atualizações');
  sidebar.querySelectorAll('.side-label').forEach(n=>n.remove());$('categoryList').hidden=true;
- $('openStock').innerHTML=icon('stock')+'<span>Gestão de stocks</span>';
+ $('openStock').innerHTML=icon('stock')+'<span>Gestão de Material</span>';
  $('navFavorites').hidden=true;$('navAll').hidden=true;$('navRequests').hidden=true;
- sidebar.append(brand,library,$('navDashboard'),medical,history,reports,movements,moderation,warehouse,receive,replenish,admin,$('manageUsersBtn'),$('openStock'),permissions,$('navTrash'),updates,$('checkUpdatesBtn'),bottom,$('signOutBtn'));
+ sidebar.append(brand,library,$('navDashboard'),medical,history,reports,movements,moderation,warehouse,receive,replenish,admin,$('manageUsersBtn'),$('openStock'),addMaterial,permissions,$('navTrash'),updates,$('checkUpdatesBtn'),bottom,$('signOutBtn'));
  $('signOutBtn').classList.add('logout-button');
  const footer=document.querySelector('main>footer');footer.textContent='Developer: HVVLF | Todos os direitos reservados aos Bombeiros Voluntários de Montijo ©';footer.className='developer-footer';
  const credit=document.createElement('div');credit.className='login-credit';credit.textContent=footer.textContent;document.querySelector('.auth-stage').append(credit);
@@ -21,11 +22,11 @@
  function sync(){
   $('adminVehiclesTab').hidden=!canPermission('vehicles');$('adminUsersTab').hidden=!canPermission('users');$('adminLogsTab').hidden=!canPermission('users');$('newUserBtn').hidden=!canPermission('users');$('adminGroupsTab').hidden=!isAdmin();$('adminBlocksTab').hidden=!isAdmin();
   const active=Boolean(session),manager=active&&['developer','admin'].includes(role),moderator=active&&['developer','admin','moderator'].includes(role);
-  history.hidden=!active;permissions.hidden=!isDeveloper();medical.hidden=!active;warehouse.hidden=!moderator;receive.hidden=!canPermission('receive');replenish.hidden=!canPermission('replenish');reports.hidden=!canPermission('reports');movements.hidden=!canPermission('reports');$('openStock').hidden=!canPermission('stock');$('navFavorites').hidden=true;$('navAll').hidden=true;$('navRequests').hidden=true;
+  addMaterial.hidden=!canPermission('products');history.hidden=!active;permissions.hidden=!isDeveloper();medical.hidden=!active;warehouse.hidden=!moderator;receive.hidden=!canPermission('receive');replenish.hidden=!canPermission('replenish');reports.hidden=!canPermission('reports');movements.hidden=!canPermission('reports');$('openStock').hidden=!canPermission('stock');$('navFavorites').hidden=true;$('navAll').hidden=true;$('navRequests').hidden=true;
   moderation.hidden=warehouse.hidden&&receive.hidden&&replenish.hidden;admin.hidden=!manager&&!canPermission('stock')&&!canPermission('users');const roleText=$('userText');if(active)roleText.textContent=(sessionUsername||session.user.email?.split('@')[0]||'').toUpperCase()+' · '+roleName(role);
   if(active)$('connectionText').textContent='Ligado à nuvem';
   $('dashboardActions').replaceChildren();
-  for(const nav of sidebar.querySelectorAll('button.nav-item')){if(nav.id==='signOutBtn'||nav.hidden||nav.closest('[hidden]'))continue;const tile=document.createElement('button');tile.type='button';tile.className='dashboard-action';tile.innerHTML=nav.innerHTML;tile.addEventListener('click',()=>nav.click());$('dashboardActions').append(tile);}
+  for(const nav of sidebar.querySelectorAll('button.nav-item')){const hidden=nav.closest('[hidden]');if(nav.id==='signOutBtn'||nav.hidden||(hidden&&sidebar.contains(hidden)))continue;const tile=document.createElement('button');tile.type='button';tile.className='dashboard-action';tile.innerHTML=nav.innerHTML;tile.addEventListener('click',()=>nav.click());$('dashboardActions').append(tile);}
  }
  window.addEventListener('gestock:render',sync);sync();
  // Existing accounts can be checked by name only through the rate-limited Edge endpoint.
