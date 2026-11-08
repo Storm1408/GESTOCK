@@ -1,3 +1,7 @@
+## Gestock 1.3.1
+
+O programa, o atalho, o nome no Windows e o instalador apresentam apenas Gestock. A versão instalada aparece discretamente no canto inferior direito, incluindo no ecrã de login e nos painéis. O nome do instalador passa a Gestock.exe; os metadados de versão e a atualização automática são mantidos.
+
 ## Gestock 1.3.0
 
 Histórico pessoal de saídas, navegação reorganizada com secção Atualizações e gestor de permissões autónomo. Todos os itens e Pedidos de itens retirados do menu. Campos de entrada/reposição alinhados; quantidades indisponíveis assinaladas a vermelho por material. Correções administrativas de stock por lote nos dois locais, com motivo, auditoria e recusa de valores desatualizados. Migração gestock_v130 aplicada e verificada no Supabase.

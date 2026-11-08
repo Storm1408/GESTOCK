@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const root=path.resolve(__dirname,'..'),pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json')));
 assert(/^\d+\.\d+\.\d+$/.test(pkg.version),'Release requires a stable version');
 if(process.env.RELEASE_TAG)assert.equal(process.env.RELEASE_TAG,`v${pkg.version}`,'Tag and package version differ');
-const dist=path.resolve(root,process.env.GESTOCK_DIST_DIR||'dist');const name=`GESTOCK-Setup-${pkg.version}.exe`;
+const dist=path.resolve(root,process.env.GESTOCK_DIST_DIR||'dist');const name=pkg.build.artifactName.replace(/\$\{version\}/g,pkg.version).replace(/\$\{ext\}/g,'exe');assert.equal(path.basename(name),name,'Installer filename must not include directories');
 const exe=path.join(dist,name),map=exe+'.blockmap',manifest=fs.readFileSync(path.join(dist,'latest.yml'),'utf8');
 const field=n=>{const match=manifest.match(new RegExp('^'+n+': ([^\\r\\n]+)','m'));assert(match,'Missing '+n);return match[1].replace(/^['"]|['"]$/g,'');};
 assert.equal(field('version'),pkg.version);assert.equal(decodeURIComponent(field('path')),name);

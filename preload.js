@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('spawnVault', {
+ getVersion: () => ipcRenderer.invoke('app:version'),
  saveReport: report => ipcRenderer.invoke('reports:save', report),
  checkUpdates: () => ipcRenderer.invoke('updates:check'),
  copyText: text => ipcRenderer.invoke('clipboard:write', text),

@@ -1,6 +1,6 @@
 {
   "name": "gestock",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Gestão de stocks do Posto Médico e Armazém de Saúde",
   "main": "main.js",
   "scripts": {
@@ -58,7 +58,9 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "assets/gestock-icon-v1.ico",
-      "uninstallerIcon": "assets/gestock-icon-v1.ico"
+      "uninstallerIcon": "assets/gestock-icon-v1.ico",
+      "shortcutName": "Gestock",
+      "uninstallDisplayName": "Gestock"
     },
     "publish": [
       {
@@ -68,7 +70,7 @@
         "releaseType": "release"
       }
     ],
-    "artifactName": "GESTOCK-Setup-${version}.${ext}"
+    "artifactName": "Gestock.${ext}"
   },
   "author": "GESTOCK",
   "dependencies": {

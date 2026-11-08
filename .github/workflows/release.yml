@@ -51,12 +51,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $version = $package.version
+          $installerName = $package.build.artifactName.Replace('${version}', $version).Replace('${ext}', 'exe')
           gh release view $env:RELEASE_TAG --json isDraft --jq .isDraft 2>$null | Out-Null
           if ($LASTEXITCODE -eq 0) { throw 'A tag já tem um release. Verifica-o antes de publicar novamente.' }
-          gh release create $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --verify-tag --draft --title "Gestock $version" --notes-file RELEASE_NOTES.md
+          gh release create $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --verify-tag --draft --title "Gestock" --notes-file RELEASE_NOTES.md
           if ($LASTEXITCODE -ne 0) { throw 'Não foi possível criar o rascunho.' }
-          gh release upload $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY "dist/GESTOCK-Setup-$version.exe" "dist/GESTOCK-Setup-$version.exe.blockmap" dist/latest.yml dist/GESTOCK-Source.zip supabase/migration_v23_access.sql supabase/migration_v23_block_reason.sql supabase/migration_v24.sql supabase/migration_v241.sql supabase/migrations/*.sql
+          gh release upload $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY "dist/$installerName" "dist/$installerName.blockmap" dist/latest.yml dist/GESTOCK-Source.zip supabase/migration_v23_access.sql supabase/migration_v23_block_reason.sql supabase/migration_v24.sql supabase/migration_v241.sql supabase/migrations/*.sql
           if ($LASTEXITCODE -ne 0) { throw 'Upload incompleto; o release continua em rascunho.' }
           gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --draft=false --latest
           if ($LASTEXITCODE -ne 0) { throw 'Não foi possível publicar o release.' }

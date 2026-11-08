@@ -40,3 +40,13 @@
   });
   document.getElementById('adminDialog').addEventListener('close', () => selectAdminTab(adminTabs[0]));
 })();
+
+// Always use the installed version, rather than a hard-coded UI string.
+(() => {
+ window.spawnVault?.getVersion?.().then(version=>{
+  if(typeof version!=='string'||!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version))return;
+  for(const host of [document.body,...document.querySelectorAll('dialog')]){
+   const badge=document.createElement('span');badge.className='app-version';badge.textContent='v'+version;badge.setAttribute('aria-label','Versão '+version);host.append(badge);
+  }
+ }).catch(()=>{});
+})();

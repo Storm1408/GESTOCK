@@ -61,6 +61,7 @@ const updates = createUpdateService({
  beforeInstall:prepareForUpdateInstall,
  setProgress:value=>BrowserWindow.getAllWindows().forEach(win=>{if(!win.isDestroyed())win.setProgressBar(value);})
 });
+ipcMain.handle('app:version',()=>app.getVersion());
 ipcMain.handle('updates:check',()=>updates.check({manual:true}));
 
 // Reports are built from escaped structured data in the main process.
