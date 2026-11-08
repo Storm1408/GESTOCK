@@ -3,6 +3,7 @@ const path = require('node:path');
 const { autoUpdater } = require('electron-updater');
 const { createUpdateService } = require('./updates');
 let installingUpdate = false;
+if(process.platform==='win32')app.setAppUserModelId('pt.gestock.app');
 
 
 function createWindow() {
@@ -18,6 +19,7 @@ function createWindow() {
       sandbox: true
     }
   });
+  if(process.platform==='win32')win.setAppDetails({appId:'pt.gestock.app',appIconPath:app.isPackaged?path.join(process.resourcesPath,'gestock-shell-icon-v2.ico'):path.join(__dirname,'assets','gestock-icon-v1.ico'),appIconIndex:0});
   win.loadFile('index.html');
   win.on('focus', () => updates.resume());
   let closeConfirmed = false;
