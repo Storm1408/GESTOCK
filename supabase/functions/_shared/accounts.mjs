@@ -43,12 +43,24 @@ export function createAccountHandler(env){
     if(!account||!auth.ok||!auth.data?.access_token||!auth.data?.refresh_token)return respond(401,{error:'Username ou palavra-passe incorretos.'});
     return respond(200,{session:{access_token:auth.data.access_token,refresh_token:auth.data.refresh_token}});
    }
+   if(body.action==='change-password'){
+    const token=request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
+    if(!token)return respond(401,{error:'Sessão inválida.'});
+    const caller=await api('/auth/v1/user',undefined,{method:'GET',key:env.publicKey,token});
+    if(!caller.ok||!caller.data?.id)return respond(401,{error:'Sessão inválida.'});
+    if(typeof body.password!=='string'||body.password.length<6||body.password.length>128)return respond(400,{error:'A palavra-passe deve ter entre 6 e 128 caracteres.'});
+    const changed=await api('/auth/v1/user',{password:body.password},{method:'PUT',key:env.publicKey,token});
+    if(!changed.ok)return respond(400,{error:changed.data?.code==='same_password'?'Escolhe uma palavra-passe diferente da inicial.':'Não foi possível alterar a palavra-passe. Usa pelo menos 6 caracteres e verifica a política do projeto.'});
+    const completed=await api('/rest/v1/rpc/gestock_finish_password',{p_user:caller.data.id});
+    if(!completed.ok)return respond(503,{error:'A palavra-passe foi alterada, mas falta confirmar o acesso. Tenta novamente com outra palavra-passe.'});
+    return respond(200,{changed:true});
+   }
    if(body.action==='create'){
     const token=request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
     if(!token)return respond(401,{error:'Inicia sessão como administrador.'});
     const caller=await api('/auth/v1/user',undefined,{method:'GET',key:env.publicKey,token});
     if(!caller.ok||!caller.data?.id)return respond(401,{error:'Sessão inválida. Inicia sessão novamente.'});
-    const allowed=await api('/rest/v1/rpc/is_spawnvault_admin',{}, {key:env.publicKey,token});
+    const allowed=await api('/rest/v1/rpc/gestock_can',{p_action:'users'}, {key:env.publicKey,token});
     if(!allowed.ok)return respond(503,{error:'Não foi possível verificar as permissões.'});
     if(allowed.data!==true)return respond(403,{error:'Apenas administradores ativos podem criar utilizadores.'});
     const username=typeof body.username==='string'?body.username.trim():'';
@@ -56,13 +68,18 @@ export function createAccountHandler(env){
     const password=body.password,role=body.role||'user';
     if(!usernamePattern.test(username))return respond(400,{error:'Username inválido: usa 3 a 40 letras, números, ponto, _, $ ou -.'});
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return respond(400,{error:'Indica um email válido.'});
-    if(typeof password!=='string'||password.length<8||password.length>128)return respond(400,{error:'A palavra-passe deve ter entre 8 e 128 caracteres.'});
+    if(typeof password!=='string'||password.length<6||password.length>128)return respond(400,{error:'A palavra-passe deve ter entre 6 e 128 caracteres.'});
     if(!['user','moderator','admin'].includes(role))return respond(400,{error:'Cargo inválido.'});
     const existing=await api('/rest/v1/rpc/spawnvault_resolve_login',{login_username:username});
     if(!existing.ok)return respond(503,{error:'Aplica primeiro a migração v2.4.1 no Supabase.'});
     if(existing.data?.length)return respond(409,{error:'Já existe um utilizador com esse username.'});
-    const created=await api('/auth/v1/admin/users',{email,password,email_confirm:true,user_metadata:{username},app_metadata:{spawnvault_created_by:caller.data.id,spawnvault_username:username,spawnvault_role:role}});
+    const reservedId=env.crypto.randomUUID();
+    const reserved=await api('/rest/v1/rpc/gestock_reserve_account',{p_id:reservedId,p_creator:caller.data.id,p_username:username,p_role:role});
+    if(!reserved.ok)return respond(400,{error:'Não foi possível reservar a conta. Verifica se o username já existe e se tens permissão para atribuir esse cargo.'});
+    const created=await api('/auth/v1/admin/users',{id:reservedId,email,password,email_confirm:true,user_metadata:{username},app_metadata:{spawnvault_created_by:caller.data.id,spawnvault_username:username,spawnvault_role:role}});
     if(!created.ok){
+     await api('/rest/v1/rpc/gestock_cancel_reservation',{p_id:reservedId});
+     if(created.data?.code==='weak_password')return respond(400,{error:'A palavra-passe não cumpre a política do Supabase. Usa pelo menos 6 caracteres.'});
      if(['email_exists','user_already_exists'].includes(created.data?.code))return respond(409,{error:'Já existe uma conta com esse email.'});
      // O trigger faz rollback da conta se houver uma colisão simultânea ou se o administrador perder acesso.
      const conflict=await api('/rest/v1/rpc/spawnvault_resolve_login',{login_username:username});

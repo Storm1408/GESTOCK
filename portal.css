@@ -12,3 +12,29 @@
 /* Keep connection state and sign-out visible on standard desktop windows. */
 @media(min-width:701px){.sidebar .nav-item{min-height:36px!important;padding:7px 10px!important;margin-bottom:2px!important}.sidebar .brand{padding-bottom:16px}.sidebar .side-label{margin-top:10px;margin-bottom:6px}.sidebar-bottom{margin-top:auto;padding-top:12px}.sidebar .logout-button{min-height:40px!important;margin-top:9px!important}}
 .issue-picker-row{align-items:start}.issue-picker-row>.btn{margin-top:25px}@media(max-width:850px){.issue-picker-row>.btn{margin-top:0}}
+
+/* Gestock 1.2: brighter accents and compact aligned controls. */
+:root{--blue:#19c879;--blue2:#12a85f;--green:#51f59e;--gold:#ffe02a}
+.btn-primary,#authDialog .dialog-actions .btn{background:#139c58;border-color:#43ed8a}.btn-primary:hover{background:#18bd69}.nav-item.active{background:#159d4c44;border-color:#46de7b90;box-shadow:inset 3px 0 #ffe02a}.side-label{color:#efdc55}.dashboard-action{border-color:#398650}.dashboard-action:hover{background:#205f37;border-color:#ffe02a}
+.sidebar .logout-button{display:flex!important;align-items:center!important;justify-content:center!important;gap:9px!important;min-height:36px!important;height:36px!important;max-height:36px!important;padding:6px 10px!important;line-height:20px!important}.logout-button .nav-icon{display:inline-flex!important;align-items:center!important;margin:0!important;width:19px!important;height:19px!important}.logout-button svg{width:19px;height:19px}.nav-icon svg{width:20px;height:20px;display:block}.dashboard-action{display:flex;align-items:center;gap:13px}.dashboard-action .nav-icon{color:var(--gold)}
+#authUsername,[data-username-input]{text-transform:uppercase}#navFavorites{display:none!important}#stockContent .quantity-field:has([data-unlimited]){width:160px!important}#stockContent .quantity-input[data-unlimited]{max-width:160px!important}
+
+/* 1.3: coherent form rows; helper text never shifts adjacent controls. */
+#navAll,#navRequests{display:none!important}
+#stockContent form.transfer-form{align-items:start;gap:16px;grid-template-columns:minmax(210px,2fr) minmax(110px,1fr) minmax(145px,1fr) 160px}
+#stockContent .transfer-form .material-picker{grid-column:auto!important;min-width:0}
+#stockContent .transfer-form>label,#stockContent .transfer-form .material-picker>label{display:block;line-height:18px}
+#stockContent .transfer-form .selection-hint{margin:5px 0 0;line-height:16px}
+#stockContent .receive-form>button{grid-column:1/-1;justify-self:end}
+#stockContent form.replenish-form{grid-template-columns:minmax(210px,1fr) 95px auto}
+#stockContent .replenish-form>button{margin-top:25px}
+#stockContent .invalid-quantity{display:inline-block;color:#ff8c96;background:#7e25334d;border:1px solid #ff6f7c;border-radius:5px;padding:3px 10px;font-weight:750}
+#stockContent .quantity-error{display:block;color:#ff929c;font-size:11px;margin-top:6px}
+.history-entry{margin:18px 0 24px}.history-entry h4{font-size:13px;color:var(--gold);margin:0 0 10px}
+@media(max-width:1000px){#stockContent form.receive-form{grid-template-columns:repeat(2,minmax(0,1fr))}#stockContent .receive-form .material-picker{grid-column:1/-1!important}}
+@media(max-width:700px){#stockContent form.transfer-form{grid-template-columns:minmax(0,1fr)}#stockContent .transfer-form .material-picker{grid-column:auto!important}#stockContent .transfer-form>button{grid-column:auto;width:100%;margin-top:0}}
+
+#stockContent .stock-correction-button{display:block;font-size:11px;padding:5px 9px;margin-top:7px}
+#stockContent #stockAdjustmentForm{grid-template-columns:160px minmax(230px,1fr) auto;align-items:start}
+#stockContent #stockAdjustmentForm>button{margin-top:25px}
+@media(max-width:700px){#stockContent #stockAdjustmentForm{grid-template-columns:1fr}#stockContent #stockAdjustmentForm>button{margin-top:0}}
