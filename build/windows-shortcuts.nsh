@@ -3,6 +3,7 @@
   ${if} ${FileExists} "$newStartMenuLink"
     CreateShortCut "$newStartMenuLink" "$appExe" "" "$INSTDIR\resources\gestock-shell-icon-v2.ico" 0 "" "" "${APP_DESCRIPTION}"
     WinShell::SetLnkAUMI "$newStartMenuLink" "${APP_ID}"
+    System::Call 'Shell32::SHChangeNotify(i 0x2000, i 5, w "$newStartMenuLink", p 0)'
   ${endif}
   ${if} ${FileExists} "$newDesktopLink"
     CreateShortCut "$newDesktopLink" "$appExe" "" "$INSTDIR\resources\gestock-shell-icon-v2.ico" 0 "" "" "${APP_DESCRIPTION}"

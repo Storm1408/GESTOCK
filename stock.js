@@ -4,6 +4,7 @@
  const names={read:'Consultar materiais',receive:'Registar entradas',consume:'Registar saídas',replenish:'Repor o Posto Médico',products:'Adicionar materiais',reports:'Gerar relatórios',vehicles:'Gerir veículos',images:'Gerir imagens e editar materiais',stock:'Gerir material',users:'Gerir utilizadores',remove_medical_lot:'Eliminar lotes no Posto Médico',remove_central_lot:'Eliminar lotes no Armazém de Saúde'};
  const svg={eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>',trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>'};
  const roles={developer:'Developer',admin:'Administrador',moderator:'Moderador',user:'Utilizador'};
+ let restockRequest=null;
  let data=null,page='medical',busy=false,generation=0,actor=null,cart=[],request=crypto.randomUUID(),imageURLs=new Map(),invalidProducts=new Set();
  const canRemove=where=>Boolean(data)&&(['developer','admin'].includes(data.role)||(where==='medical'&&data.role==='moderator'))&&can('remove_'+where+'_lot');
  const manager=()=>can('stock'),can=a=>data?.permissions.includes(a),product=id=>data.products.find(p=>p.id===id);
@@ -15,18 +16,23 @@
  function render(){
   const s=data;$('stockStatus').textContent=roles[s.role];
   let body='';
+  $('stockDialog').dataset.page=page;
   if(page==='history'){
    body='<h3>As tuas últimas saídas</h3><p>Até 50 saídas registadas pela tua conta, da mais recente para a mais antiga.</p>'+table(['Data e hora','Veículo','Detalhes'],s.history.map(h=>`<tr data-history-row="${esc(h.id)}"><td>${esc(new Date(h.created_at).toLocaleString('pt-PT'))}</td><td>${esc(h.vehicle)}</td><td><button type="button" class="btn btn-secondary lot-icon-button" data-history-view="${esc(h.id)}" aria-expanded="false" aria-controls="historyDetails" aria-label="Ver materiais da saída de ${esc(new Date(h.created_at).toLocaleString('pt-PT'))}" title="Ver materiais">${svg.eye}</button></td></tr>`))+'<section id="historyDetails" class="history-details" hidden aria-live="polite"></section>';
   }else if(page==='medical'){
    body=`<h3>Dar saída de material</h3><p>Uma saída corresponde a um único veículo. Adiciona os materiais e confirma a saída.</p>`;
    if(can('consume')) body+=`<form id="issueForm"><fieldset class="vehicle-checklist"><legend>Seleciona um veículo</legend>${s.vehicles.map(v=>`<label class="vehicle-choice"><input type="radio" name="vehicle" value="${esc(v.id)}" required><span>${esc(v.name)}</span></label>`).join('')||'<p>Não há veículos disponíveis. Contacta um administrador.</p>'}</fieldset><div class="issue-picker-row">${picker()}${quantity('quantity')}<button type="button" class="btn" data-add-cart>Adicionar à saída</button></div><div id="issueCart">${cartHTML()}</div><button type="submit" class="btn btn-primary" ${!s.vehicles.length?'disabled':''}>Confirmar saída</button></form>`;
    else body+='<p>O teu perfil não tem permissão para registar saídas.</p>';
-   if(s.role!=='user')body+=inventory('medical');
-  }else if(['warehouse','receive','replenish'].includes(page)){
-   body='<h3>Armazém de Saúde</h3>';
-   if(page==='receive'&&can('receive'))body+=`<h3>Entrada de material</h3><form class="transfer-form receive-form" data-operation="transfer">${picker()}<input type="hidden" name="p_kind" value="receive"><label>Lote<input name="p_lot" maxlength="120" required></label><label>Validade<input name="p_expiry" type="date" required></label>${quantity('p_quantity',false,true)}<button class="btn btn-primary">Registar entrada</button></form>`;
-   if(page==='replenish'&&can('replenish'))body+=`<h3>Reposição do Posto Médico</h3><form class="transfer-form replenish-form" data-operation="transfer">${picker()}<input type="hidden" name="p_kind" value="replenish">${quantity()}<button class="btn btn-primary">Registar reposição</button></form>`;
-   if(page==='warehouse')body+=inventory('central');
+  }else if(page==='medicalStock'){
+   body=inventory('medical');
+  }else if(page==='replenish'){
+   body=replenishment();
+  }else if(page==='suppliers'){
+   body=suppliersPage();
+  }else if(page==='warehouse'){
+   body=inventory('central');
+  }else if(page==='receive'){
+   body=`<h3>Entrada de material</h3><form class="transfer-form receive-form" data-operation="transfer">${picker()}<input type="hidden" name="p_kind" value="receive"><label>Lote<input name="p_lot" maxlength="120" required></label><label>Validade<input name="p_expiry" type="date" required></label>${quantity('p_quantity',false,true)}<button class="btn btn-primary">Registar entrada</button></form>`;
   }else if(page==='reports'){
    body=`<h3>Relatórios PDF</h3><p>Listas de conferência com materiais, quantidades e espaço de verificação.</p><form id="pdfReportForm"><label>Relatório<select name="kind"><option value="consume">Saídas de material</option><option value="replenish">Reposições efetuadas</option><option value="medical">Stock do Posto Médico</option><option value="inventory">Inventário do Armazém de Saúde</option><option value="receive">Entradas de material</option></select></label><label>Desde<input type="date" name="start"></label><label>Até<input type="date" name="end"></label><button class="btn btn-primary">Gerar PDF</button><p class="report-period-note">O período aplica-se a movimentos; os relatórios de stock mostram a quantidade atual.</p></form>`;
   }else if(page==='movements'){
@@ -37,14 +43,73 @@
    else body+='<p>Sem permissão para adicionar materiais.</p>';
   }else if(page==='manage'){
    body='<h3>Gestão de Material</h3>';
-   body+=`<div class="stock-product-list">${s.products.map(p=>`<div class="product-management-row">${photo(p)}<div><strong>${esc(p.name)}</strong><small>${esc(p.brand)}</small></div>${can('images')?`<button type="button" class="btn btn-secondary" data-edit-product="${esc(p.id)}">Editar / imagem</button>`:''}</div>`).join('')||'<p>Ainda não existem materiais.</p>'}</div><div id="productEditor"></div>`;
+   body+=`<div class="stock-product-list">${s.products.map(p=>`<div class="product-management-row">${photo(p)}<div><strong>${esc(p.name)}</strong><small>${esc(p.brand)}</small></div>${can('images')?`<button type="button" class="btn btn-secondary" data-edit-product="${esc(p.id)}">Editar / imagem</button>`:''}${s.planning?`<button type="button" class="btn btn-secondary" data-material-plan="${esc(p.id)}">Configurar</button>`:''}</div>`).join('')||'<p>Ainda não existem materiais.</p>'}</div><div id="productEditor"></div>`;
   }else if(page==='permissions'){
    if(s.role==='developer')body=`<h3>Permissões por cargo</h3>${table(['Permissão','Administrador','Moderador','Utilizador'],Object.entries(names).map(([a,label])=>`<tr><td>${label}</td>${['admin','moderator','user'].map(r=>{if((a==='remove_medical_lot'&&r==='user')||(a==='remove_central_lot'&&r!=='admin'))return '<td><span class="permission-minimum">Requer '+(a==='remove_medical_lot'?'Moderador':'Administrador')+'</span></td>';return `<td><input type="checkbox" data-permission="${a}" data-role="${r}" aria-label="${esc(roles[r]+' - '+label)}" ${s.matrix.some(p=>p.role===r&&p.action===a)?'checked':''}></td>`;}).join('')}</tr>`))}<p>As alterações aplicam-se de imediato no servidor. O Developer mantém acesso total e exclusivo ao seu cargo.</p>`;
    else body='<p>Apenas o Developer pode gerir as permissões.</p>';
   }
-  $('stockDialog').querySelector('h2').textContent='Gestock · '+({history:'Histórico',permissions:'Gestor de permissões',medical:'Posto Médico',warehouse:'Armazém de Saúde',manage:'Gestão de Material',add:'Adicionar material',receive:'Entrada de material',replenish:'Reposição do Posto Médico'}[page]||'Gestão de Material');
+  $('stockDialog').querySelector('h2').textContent='Gestock · '+({history:'Histórico',permissions:'Gestor de permissões',medical:'Levantamento Material Posto Médico',medicalStock:'Stock do Posto Médico',suppliers:'Fornecedores',movements:'Movimentos',reports:'Relatórios',warehouse:'Armazém de Saúde',manage:'Gestão de Material',add:'Adicionar material',receive:'Entrada de material',replenish:'Reposição do Posto Médico'}[page]||'Gestão de Material');
   $('stockContent').innerHTML=body;
   if(page==='medical')for(const input of document.querySelectorAll('#issueForm [data-product-search],#issueForm [name=quantity]'))input.required=false;
+ }
+ function suppliersPage(){
+  const suppliers=data.planning.suppliers;
+  return '<h3>Fornecedores</h3><div id="supplierEditor">'+supplierForm()+'</div>'+
+    table(['Empresa','Contacto','Telefone','Email','Ações'],suppliers.map(s=>`<tr>
+      <td>${esc(s.name)}</td><td>${esc(s.contact)||'—'}</td><td>${esc(s.phone)||'—'}</td><td>${esc(s.email)||'—'}</td>
+      <td><button type="button" class="btn btn-secondary" data-edit-supplier="${esc(s.id)}">Editar</button>
+      <button type="button" class="btn btn-secondary" data-delete-supplier="${esc(s.id)}">Eliminar</button></td>
+    </tr>`));
+ }
+ function supplierForm(s={}){
+  return `<form id="supplierForm">
+    <input type="hidden" name="p_id" value="${esc(s.id)}">
+    <label>Empresa<input name="p_name" maxlength="120" value="${esc(s.name)}" required></label>
+    <label>Nome do contacto<input name="p_contact" maxlength="120" value="${esc(s.contact)}"></label>
+    <label>Telefone<input name="p_phone" type="tel" maxlength="40" value="${esc(s.phone)}"></label>
+    <label>Email<input name="p_email" type="email" maxlength="254" value="${esc(s.email)}"></label>
+    <button class="btn btn-primary">${s.id?'Guardar alterações':'Adicionar fornecedor'}</button>
+    ${s.id?'<button type="button" class="btn btn-secondary" data-cancel-supplier>Cancelar</button>':''}
+  </form>`;
+ }
+ function materialPlanForm(p){
+  return `<h3>Configuração · ${esc(p.name)}</h3><form id="materialPlanForm">
+    <input type="hidden" name="p_product" value="${esc(p.id)}">
+    <label>Fornecedor<select name="p_supplier"><option value="">Sem fornecedor</option>
+      ${data.planning.suppliers.map(s=>`<option value="${esc(s.id)}"${s.id===p.supplier_id?' selected':''}>${esc(s.name)}</option>`).join('')}
+    </select></label>
+    <label>Mínimo no Armazém<input type="number" name="p_minimum" min="0" max="2147483647" placeholder="Sem alerta" value="${esc(p.central_minimum)}"></label>
+    <label>Quantidade exigida no Posto Médico<input type="number" name="p_target" min="0" max="999" required value="${esc(p.target)}"></label>
+    <label>Ordem de reposição<input type="number" name="p_order" min="1" max="9999" required value="${esc(p.restock_order)}"></label>
+    <small class="form-hint">Os números mais baixos aparecem primeiro. A quantidade 0 deixa o material sem objetivo de reposição.</small>
+    <button class="btn btn-primary">Guardar configuração</button>
+  </form>`;
+ }
+ function replenishment(){
+  const materials=data.planning.products.filter(p=>p.target>0||p.system_medical!=='0');
+  return '<h3>Lista de reposição</h3><p>Conta o material existente e indica quanto vais repor. A sugestão na última coluna é calculada a partir da contagem.</p>'+
+    (materials.some(p=>p.target>0)?'':'<p>Os administradores podem definir as quantidades exigidas em Gestão de Material.</p>')+
+    '<form id="replenishForm">'+table(['Ordem','Material','Exigida','Presente','A repor'],materials.map(p=>`<tr data-replenish-product="${esc(p.id)}">
+      <td>${p.restock_order}</td><td><strong>${esc(p.name)}</strong><small>${esc(p.brand)}</small></td>
+      <td>${p.target||'Sem objetivo'}</td>
+      <td><input name="counted" type="number" min="0" max="9007199254740991" inputmode="numeric" aria-label="Quantidade presente de ${esc(p.name)}"></td>
+      <td>${p.target>0?`<input name="restock" type="number" min="0" max="${p.target}" inputmode="numeric" placeholder="Após contagem" aria-label="Quantidade a repor de ${esc(p.name)}">`:'—'}</td>
+    </tr>`))+
+    (materials.some(p=>p.target>0)?'<button class="btn btn-primary">Registar reposição</button>':'')+'</form>';
+ }
+ function replenishmentLines(form){
+  const products=new Map(data.planning.products.map(p=>[p.id,p]));
+  const lines=[];
+  for(const row of form.querySelectorAll('[data-replenish-product]')){
+   const quantity=row.querySelector('[name=restock]')?.valueAsNumber;
+   if(!quantity)continue;
+   const p=products.get(row.dataset.replenishProduct), counted=row.querySelector('[name=counted]').valueAsNumber;
+   if(!Number.isSafeInteger(counted)||counted<0)throw Error('Indica a quantidade presente de '+p.name+'.');
+   if(quantity>Math.max(0,p.target-counted))throw Error('A quantidade a repor de '+p.name+' ultrapassa a falta indicada.');
+   lines.push({product:p.id,counted,quantity,target:p.target,expected:p.system_medical});
+  }
+  if(!lines.length)throw Error('Indica a quantidade a repor de pelo menos um material.');
+  return lines;
  }
  function cartHTML(){return table(['Material','Marca','Quantidade',''],cart.map(line=>{const p=product(line.product);return `<tr><td>${photo(p)} ${esc(p.name)}</td><td>${esc(p.brand)}</td><td>${invalidProducts.has(line.product)?`<span class="invalid-quantity" role="alert" aria-label="Quantidade inválida: ${line.quantity}">${line.quantity}</span><small class="quantity-error">Quantidade indisponível</small>`:line.quantity}</td><td><button type="button" class="btn btn-secondary" data-remove-cart="${esc(p.id)}" aria-label="Remover ${esc(p.name)}">Remover</button></td></tr>`;}));}
  function inventory(where){
@@ -59,27 +124,61 @@
   const s=await rpc('snapshot');if(ticket!==generation||session?.user.id!==id)return;data=s;actor=id;imageURLs.clear();
   await Promise.all(s.products.filter(p=>p.image_path).map(async p=>{const r=await client.storage.from('gestock-images').createSignedUrl(p.image_path,600);if(!r.error)imageURLs.set(p.id,r.data.signedUrl);}));
   if(ticket!==generation||session?.user.id!==id)return;
+  const admin=['developer','admin'].includes(s.role), staff=admin||s.role==='moderator';
   if(page==='permissions'&&s.role!=='developer'||page==='add'&&!can('products'))page='medical';
-  if(page==='receive'&&!can('receive')||page==='replenish'&&!can('replenish'))page='medical';
-  if(page==='manage'&&!manager()||['reports','movements'].includes(page)&&!can('reports')||page==='warehouse'&&s.role==='user')page='medical';render();
+  if(page==='receive'&&!can('receive')||page==='replenish'&&(!staff||!can('replenish')))page='medical';
+  if(page==='manage'&&!manager()||page==='reports'&&!can('reports')||page==='warehouse'&&!staff||
+     page==='medicalStock'&&(!staff||!can('read'))||page==='movements'&&(!admin||!can('reports'))||
+     page==='suppliers'&&(!admin||!manager()))page='medical';
+  if(page==='replenish'||page==='suppliers'||page==='manage'&&admin&&manager()){
+   s.planning=await rpc('planning');
+   if(ticket!==generation||session?.user.id!==id)return;
+  }
+  render();
  }catch(e){if(ticket===generation)$('stockStatus').textContent=e.message;}}
- async function show(p='medical'){page=p;if(!$('stockDialog').open)$('stockDialog').showModal();await load();}
- async function run(operation,args,message){if(busy)return;busy=true;const id=session?.user.id;const buttons=[...$('stockContent').querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);try{await rpc(operation,args);if(id!==session?.user.id)return;if(operation==='issue'){cart=[];invalidProducts.clear();request=crypto.randomUUID();}await load();$('stockStatus').textContent=message;notify(message,'success');}catch(e){if(operation==='issue'){invalidProducts.clear();try{const detail=JSON.parse(e.details);if(detail.code==='GESTOCK_INSUFFICIENT_STOCK'&&Array.isArray(detail.products))for(const product of detail.products)if(cart.some(l=>l.product===product))invalidProducts.add(product);}catch{}if($('issueCart'))$('issueCart').innerHTML=cartHTML();$('issueCart')?.querySelector('.invalid-quantity')?.scrollIntoView({block:'nearest'});}$('stockStatus').textContent=e.message;buttons.filter(b=>b.isConnected).forEach(b=>b.disabled=false);}finally{busy=false;}}
+ async function show(p='medical'){page=p;$('stockDialog').dataset.page=p;$('stockContent').replaceChildren();if(!$('stockDialog').open)$('stockDialog').showModal();await load();}
+ async function run(operation,args,message){if(busy)return;busy=true;const id=session?.user.id;const buttons=[...$('stockContent').querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);try{await rpc(operation,args);if(id!==session?.user.id)return;if(operation==='issue'){cart=[];invalidProducts.clear();request=crypto.randomUUID();}if(operation==='restock')restockRequest=null;await load();$('stockStatus').textContent=message;notify(message,'success');}catch(e){if(operation==='issue'){invalidProducts.clear();try{const detail=JSON.parse(e.details);if(detail.code==='GESTOCK_INSUFFICIENT_STOCK'&&Array.isArray(detail.products))for(const product of detail.products)if(cart.some(l=>l.product===product))invalidProducts.add(product);}catch{}if($('issueCart'))$('issueCart').innerHTML=cartHTML();$('issueCart')?.querySelector('.invalid-quantity')?.scrollIntoView({block:'nearest'});}$('stockStatus').textContent=e.message;buttons.filter(b=>b.isConnected).forEach(b=>b.disabled=false);}finally{busy=false;}}
  function selected(form){const id=form.querySelector('[name=p_product]')?.value,text=form.querySelector('[data-product-search]');const p=product(id);if(!p||text?.value!==p.name+' · '+p.brand)throw Error('Clica num dos materiais sugeridos.');return p.id;}
  function readQuantity(input,zero=false){if(input.dataset.unlimited){const n=Number(input.value);if(!/^[0-9]+$/.test(input.value)||!Number.isSafeInteger(n)||n<(zero?0:1))throw Error('Indica uma quantidade inteira positiva válida.');return n;}if(!/^[0-9]{1,3}$/.test(input.value)||Number(input.value)<(zero?0:1))throw Error('A quantidade deve ser um número '+(zero?'entre 0':'entre 1')+' e 999.');return Number(input.value);}
  $('openStock').addEventListener('click',()=>show('manage'));
- for(const [id,p] of [['openMedical','medical'],['openWarehouse','warehouse'],['openReceive','receive'],['openReplenish','replenish'],['openReports','reports'],['openMovements','movements'],['openHistory','history'],['openPermissions','permissions'],['openAddMaterial','add']])document.addEventListener('click',e=>{if(e.target.closest('#'+id))show(p);});
+ for(const [id,p] of [['openMedical','medical'],['openMedicalStock','medicalStock'],['openSuppliers','suppliers'],['openWarehouse','warehouse'],['openReceive','receive'],['openReplenish','replenish'],['openReports','reports'],['openMovements','movements'],['openHistory','history'],['openPermissions','permissions'],['openAddMaterial','add']])document.addEventListener('click',e=>{if(e.target.closest('#'+id))show(p);});
  $('closeStock').addEventListener('click',()=>{if(!busy)$('stockDialog').close();});
  $('stockDialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
  $('stockDialog').addEventListener('close',()=>{if($('stockDialog').open)return;generation++;data=null;imageURLs.clear();$('stockContent').replaceChildren();});
  $('stockContent').addEventListener('input',e=>{
   const input=e.target;if(input.classList.contains('quantity-input'))input.value=input.value.replace(/\D/g,'').slice(0,input.dataset.unlimited?16:3);
+  if(input.name==='counted'){
+   const next=input.closest('tr').querySelector('[name=restock]');
+   if(next)next.placeholder=input.value&&input.validity.valid?String(Math.max(0,Number(next.max)-input.valueAsNumber)):'Após contagem';
+  }
   if(!input.matches('[data-product-search]'))return;
   const box=input.closest('.material-picker'),list=box.querySelector('.material-suggestions');box.querySelector('[name=p_product]').value='';box.querySelector('.selection-hint').textContent='Seleciona um dos materiais sugeridos.';
   const q=input.value.trim().toLocaleLowerCase('pt');const matches=q?data.products.filter(p=>(p.name+' '+p.brand).toLocaleLowerCase('pt').includes(q)).slice(0,12):[];
   list.innerHTML=matches.map(p=>`<button type="button" role="option" data-pick="${esc(p.id)}">${photo(p)}<span><strong>${esc(p.name)}</strong><small>${esc(p.brand)}</small></span></button>`).join('')||'<p>Sem materiais encontrados.</p>';list.hidden=!q;input.setAttribute('aria-expanded',String(Boolean(q)));
  });
  $('stockContent').addEventListener('click',async e=>{try{
+  if(busy)return;
+  const editSupplier=e.target.closest('[data-edit-supplier]');
+  if(editSupplier){
+   $('supplierEditor').innerHTML=supplierForm(data.planning.suppliers.find(s=>s.id===editSupplier.dataset.editSupplier));
+   $('supplierForm').elements.p_name.focus();
+   return;
+  }
+  if(e.target.closest('[data-cancel-supplier]')){$('supplierEditor').innerHTML=supplierForm();return;}
+  const deleteSupplier=e.target.closest('[data-delete-supplier]');
+  if(deleteSupplier){
+   const supplier=data.planning.suppliers.find(s=>s.id===deleteSupplier.dataset.deleteSupplier);
+   if(confirm('Eliminar '+supplier.name+'? Os materiais associados ficam sem fornecedor.')){
+    await run('supplier',{p_id:supplier.id,p_delete:true},'Fornecedor eliminado.');
+   }
+   return;
+  }
+  const plan=e.target.closest('[data-material-plan]');
+  if(plan){
+   $('productEditor').innerHTML=materialPlanForm(data.planning.products.find(p=>p.id===plan.dataset.materialPlan));
+   $('productEditor').scrollIntoView({block:'nearest'});
+   return;
+  }
   const history=e.target.closest('[data-history-view]');if(history){const h=data.history.find(x=>x.id===history.dataset.historyView);if(!h)return;document.querySelectorAll('[data-history-view]').forEach(b=>b.setAttribute('aria-expanded',String(b===history)));const details=$('historyDetails');details.hidden=false;details.innerHTML=`<div class="history-detail-heading"><h3>${esc(h.vehicle)} · ${esc(new Date(h.created_at).toLocaleString('pt-PT'))}</h3><button type="button" class="btn btn-secondary" data-history-close>Fechar detalhes</button></div>${table(['Material','Marca','Quantidade'],h.lines.map(l=>`<tr><td>${esc(l.name)}</td><td>${esc(l.brand)}</td><td>${l.quantity}</td></tr>`))}`;details.scrollIntoView({block:'nearest'});return;}
   if(e.target.closest('[data-history-close]')){const button=document.querySelector('[data-history-view][aria-expanded=true]');$('historyDetails').hidden=true;button?.setAttribute('aria-expanded','false');button?.focus();return;}
   const removeLot=e.target.closest('[data-remove-lot]');if(removeLot){const where=removeLot.dataset.removeLocation;if(!canRemove(where))throw Error('Sem permissão para eliminar lotes neste local.');const b=data.batches.find(x=>x.id===removeLot.dataset.removeLot),p=product(b.product_id);$('stockCorrectionEditor').innerHTML=`<h3>Eliminar lote ${esc(b.lot)}</h3><p>${esc(p.name)} · ${where==='medical'?'Posto Médico':'Armazém de Saúde'} · ${b[where]} unidades. Os restantes lotes e o stock do outro local são preservados.</p><form id="removeLotForm"><input type="hidden" name="p_batch" value="${esc(b.id)}"><input type="hidden" name="p_location" value="${where}"><input type="hidden" name="p_expected" value="${b[where]}"><label>Motivo da eliminação<input name="p_reason" minlength="3" maxlength="300" required placeholder="Ex.: Lote danificado ou retirado"></label><button class="btn lot-remove-button">Eliminar lote deste local</button></form>`;$('stockCorrectionEditor').scrollIntoView({block:'nearest'});return;}
@@ -94,6 +193,27 @@
   const edit=e.target.closest('[data-edit-product]');if(edit&&can('images')){const p=product(edit.dataset.editProduct);$('productEditor').innerHTML=`<h3>Editar ${esc(p.name)}</h3><form id="productEditForm"><input type="hidden" name="id" value="${esc(p.id)}"><label>Nome<input name="name" value="${esc(p.name)}" required maxlength="120"></label><label>Marca<input name="brand" value="${esc(p.brand)}" required maxlength="120"></label><label>Mini imagem (PNG, JPG ou WebP, até 3 MB)<input type="file" name="image" accept="image/png,image/jpeg,image/webp"></label><label class="inline-check"><input type="checkbox" name="remove">Remover imagem</label><button class="btn btn-primary">Guardar alterações</button></form>`;$('productEditor').scrollIntoView({block:'nearest'});}
  }catch(err){$('stockStatus').textContent=err.message;}});
  $('stockContent').addEventListener('submit',async e=>{e.preventDefault();if(busy)return;const f=e.target;try{
+  if(f.id==='supplierForm'){
+   const args=Object.fromEntries(new FormData(f));
+   args.p_id=args.p_id||null;
+   await run('supplier',args,'Fornecedor guardado.');
+   return;
+  }
+  if(f.id==='materialPlanForm'){
+   const args=Object.fromEntries(new FormData(f));
+   args.p_supplier=args.p_supplier||null;
+   args.p_minimum=args.p_minimum===''?null:Number(args.p_minimum);
+   args.p_target=Number(args.p_target);
+   args.p_order=Number(args.p_order);
+   await run('material_plan',args,'Configuração guardada.');
+   return;
+  }
+  if(f.id==='replenishForm'){
+   const lines=replenishmentLines(f),key=JSON.stringify(lines);
+   if(restockRequest?.key!==key)restockRequest={key,id:crypto.randomUUID()};
+   await run('restock',{p_request:restockRequest.id,p_lines:lines},'Reposição registada com sucesso.');
+   return;
+  }
   if(f.getAttribute('id')==='issueForm'){if(!cart.length)throw Error('Adiciona pelo menos um material à saída.');const v=f.querySelector('[name=vehicle]:checked');if(!v)throw Error('Seleciona um único veículo.');await run('issue',{p_vehicle:v.value,p_lines:cart,p_request:request},'Saída registada com sucesso.');return;}
   if(f.getAttribute('id')==='removeLotForm'){const args=Object.fromEntries(new FormData(f));args.p_expected=Number(args.p_expected);await run('remove_lot',args,'Lote eliminado deste local com sucesso.');return;}
   if(f.getAttribute('id')==='stockAdjustmentForm'){const args=Object.fromEntries(new FormData(f));args.p_quantity=readQuantity(f.querySelector('[name=p_quantity]'),true);args.p_expected=Number(args.p_expected);await run('adjust',args,'Quantidade corrigida com sucesso.');return;}
@@ -112,5 +232,5 @@
  document.addEventListener('submit',async e=>{if(e.target.getAttribute('id')!=='vehicleForm')return;e.preventDefault();if(busy)return;busy=true;try{const fd=new FormData(e.target);await rpc('vehicle',{p_name:fd.get('name'),p_id:fd.get('id')||null});await vehicles();notify('Veículo guardado.','success');}catch(e){notify(e.message);}finally{busy=false;}});
  document.addEventListener('click',async e=>{const edit=e.target.closest('[data-vehicle-edit]'),del=e.target.closest('[data-vehicle-delete]');if(edit){const f=$('vehicleForm');f.elements.id.value=edit.dataset.vehicleEdit;f.elements.name.value=edit.dataset.vehicleName;}if(del&&!busy&&confirm('Eliminar este veículo da lista? O histórico de saídas será preservado.')){busy=true;try{await rpc('vehicle',{p_name:'',p_id:del.dataset.vehicleDelete,p_delete:true});await vehicles();}catch(err){notify(err.message);}finally{busy=false;}}});
  window.GestockInventory={open:show,refresh:async()=>{if($('stockDialog').open&&!busy)await load();}};
- setInterval(()=>{if(actor&&session?.user.id!==actor){generation++;actor=null;data=null;cart=[];invalidProducts.clear();request=crypto.randomUUID();imageURLs.clear();if($('stockDialog').open)$('stockDialog').close();}},500);
+ setInterval(()=>{if(actor&&session?.user.id!==actor){generation++;actor=null;data=null;restockRequest=null;cart=[];invalidProducts.clear();request=crypto.randomUUID();imageURLs.clear();if($('stockDialog').open)$('stockDialog').close();}},500);
 })();

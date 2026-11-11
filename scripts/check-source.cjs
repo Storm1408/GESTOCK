@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),asse
 const root=path.resolve(__dirname,'..');const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json')));
 const lock=JSON.parse(fs.readFileSync(path.join(root,'package-lock.json')));
 assert.equal(pkg.version,lock.version);assert.equal(pkg.version,lock.packages[''].version);
-for(const file of ['main.js','preload.js','renderer.js','branding.js','access.js','updates.js','stock.js','portal.js','password-gate.js','reports.js','app-config.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file});
+for(const file of ['main.js','preload.js','renderer.js','branding.js','access.js','updates.js','stock.js','portal.js','planning.js','password-gate.js','reports.js','app-config.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file});
 const config=JSON.parse(fs.readFileSync(path.join(root,'update-config.json')));
 assert.equal(config.provider,'github');
 assert.equal(config.owner,pkg.build.publish[0].owner);assert.equal(config.repo,pkg.build.publish[0].repo);

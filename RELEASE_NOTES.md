@@ -1,3 +1,13 @@
+# Gestock 1.4.1
+
+- Fornecedores com dados de contacto e associação a materiais.
+- Lista ordenada de reposição do Posto Médico, com quantidade exigida, contagem física e sugestão de reposição.
+- Consulta separada do stock do Posto Médico para moderadores e administradores.
+- Alertas no login para lotes vencidos ou com validade nos próximos 30 dias e para stock disponível no Armazém de Saúde até 10% acima do mínimo.
+- Navegação atualizada, ícone do histórico em azul e recursos do logótipo para a pesquisa do Windows.
+
+A versão usa a migração `20261111173508_gestock_v141.sql`.
+
 ## Gestock 1.4.0
 
 Lotes agrupados por material e remoção de um lote apenas no local escolhido, com motivo e auditoria. No Posto Médico, acesso mínimo de Moderador; no Armazém de Saúde, Administrador. Lotes sem quantidade deixam automaticamente de aparecer no inventário ativo e nos relatórios de stock, preservando o histórico das operações. Histórico pessoal com uma linha por saída e botão de detalhes. Dashboard corrigida no primeiro login. Gestão de stocks renomeada para Gestão de Material, sem quantidades obrigatórias; opções individuais na barra lateral, com as permissões anteriores e eliminação de lotes configurável pelo Developer dentro dos cargos mínimos.

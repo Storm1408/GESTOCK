@@ -9,3 +9,25 @@
 #stockContent form .btn{height:42px;background:#347c59;color:#f0fff1;border-color:#509c72}#stockContent>.btn{margin:0 8px 8px 0;background:#243a2a;color:#e2e9d5;border-color:#526342}
 #stockContent .stock-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:9px}#stockContent table{width:100%;min-width:600px}#stockContent th,#stockContent td{padding:12px 14px;text-align:left}#stockContent .stock-warning{color:var(--gold)}
 @media(max-width:700px){#stockDialog{width:calc(100vw - 20px);max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);padding:18px}#stockDialog>h2{font-size:19px;margin-right:75px}#stockContent form{grid-template-columns:1fr;padding:14px}#stockContent form .btn{width:100%}}
+
+#stockDialog[data-page="replenish"] {
+  width: min(1280px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+}
+#stockContent #replenishForm { grid-template-columns: 1fr; }
+#replenishForm small { display: block; color: var(--muted); }
+#stockContent #replenishForm input { margin: 0; min-width: 100px; max-width: 155px; }
+#replenishForm input::placeholder { color: #93aa94; }
+#replenishForm > button { justify-self: end; }
+#materialPlanForm .form-hint { grid-column: 1 / -1; color: var(--muted); }
+#stockContent [data-history-view] { color: #78d2f4; }
+#stockAlertsDialog {
+  width: min(920px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+#closeStockAlerts { float: right; }
+#stockAlertsContent { clear: both; }
+#stockAlertsContent .stock-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; }
+#stockAlertsContent table { min-width: 490px; }
