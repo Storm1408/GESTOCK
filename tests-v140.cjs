@@ -23,7 +23,9 @@ const migration3=fs.readdirSync('supabase/migrations').find(x=>x.endsWith('_gest
 const migration4=fs.readdirSync('supabase/migrations').find(x=>x.endsWith('_gestock_v140.sql'));await db.exec(fs.readFileSync('supabase/migrations/'+migration4,'utf8'));
 const p=(await as('dev',"select gestock_product('Compressas','Marca') id"))[0].id;
 const vehicle=(await as('admin',"select gestock_vehicle('ABSC 01') id"))[0].id;
-for(const lot of ['L1','L2'])await as('admin',"select gestock_transfer('receive',$1,20,$2,'2099-12-31')",[p,lot]);
+for(const [lot,expiry] of [['L1','2099-12-30'],['L2','2099-12-31']]){
+  await as('admin',"select gestock_transfer('receive',$1,20,$2,$3)",[p,lot,expiry]);
+}
 await as('admin',"select gestock_transfer('replenish',$1,5)",[p]);
 const batch=(await db.query("select * from gestock_batches where product_id=$1 and lot='L1'",[p])).rows[0];
 const lines=JSON.stringify([{product:p,quantity:2}]);await as('user','select gestock_issue($1,$2,gen_random_uuid())',[vehicle,lines]);
