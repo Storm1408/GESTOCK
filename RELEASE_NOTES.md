@@ -1,3 +1,8 @@
+# Gestock 1.4.2
+
+- Logótipo da fénix e novos fundos em cinzento claro, vermelho e branco no ecrã de bloqueio e nas janelas da aplicação.
+- Fénix com fundo transparente nos ícones do Windows e nos relatórios PDF.
+
 # Gestock 1.4.1
 
 - Fornecedores com dados de contacto e associação a materiais.

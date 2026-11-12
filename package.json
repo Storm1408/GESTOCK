@@ -1,6 +1,6 @@
 {
   "name": "gestock",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Gestão de stocks do Posto Médico e Armazém de Saúde",
   "main": "main.js",
   "scripts": {
@@ -40,9 +40,10 @@
       "stock.js",
       "stock.css",
       "identity.css",
-      "assets/*.ico",
-      "assets/identity/gestock-logo-refined-dark.png",
-      "assets/identity/gestock-background-approved.png",
+      "assets/gestock-fenix.ico",
+      "assets/identity/gestock-logo-fenix-transparente.png",
+      "assets/identity/gestock-fundo-app-cinzento.png",
+      "assets/identity/gestock-fundo-bloqueio-cinzento.png",
       "portal.js",
       "portal.css",
       "reports.js",
@@ -53,13 +54,13 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/gestock-icon-v1.ico"
+      "icon": "assets/gestock-fenix.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "assets/gestock-icon-v1.ico",
-      "uninstallerIcon": "assets/gestock-icon-v1.ico",
+      "installerIcon": "assets/gestock-fenix.ico",
+      "uninstallerIcon": "assets/gestock-fenix.ico",
       "shortcutName": "Gestock",
       "uninstallDisplayName": "Gestock",
       "include": "build/windows-shortcuts.nsh"
@@ -75,16 +76,16 @@
     "artifactName": "Gestock.${ext}",
     "extraResources": [
       {
-        "from": "assets/gestock-icon-v1.ico",
-        "to": "gestock-shell-icon-v2.ico"
+        "from": "assets/gestock-fenix.ico",
+        "to": "gestock-shell-fenix.ico"
       },
       {
-        "from": "assets/gestock-start-70.png",
-        "to": "gestock-start-70.png"
+        "from": "assets/gestock-fenix-start-70.png",
+        "to": "gestock-fenix-start-70.png"
       },
       {
-        "from": "assets/gestock-start-150.png",
-        "to": "gestock-start-150.png"
+        "from": "assets/gestock-fenix-start-150.png",
+        "to": "gestock-fenix-start-150.png"
       }
     ],
     "extraFiles": [

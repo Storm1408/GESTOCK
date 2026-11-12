@@ -9,9 +9,9 @@ if(process.platform==='win32')app.setAppUserModelId('pt.gestock.app');
 function createWindow() {
   const win = new BrowserWindow({
     width: 1180, height: 780, minWidth: 900, minHeight: 620,
-    backgroundColor: '#0d1210',
+    backgroundColor: '#bcc3ce',
     title: 'Gestock',
-    icon: path.join(__dirname, 'assets', 'gestock-icon-v1.ico'),
+    icon: path.join(__dirname, 'assets', 'gestock-fenix.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -19,7 +19,7 @@ function createWindow() {
       sandbox: true
     }
   });
-  if(process.platform==='win32')win.setAppDetails({appId:'pt.gestock.app',appIconPath:app.isPackaged?path.join(process.resourcesPath,'gestock-shell-icon-v2.ico'):path.join(__dirname,'assets','gestock-icon-v1.ico'),appIconIndex:0});
+  if(process.platform==='win32')win.setAppDetails({appId:'pt.gestock.app',appIconPath:app.isPackaged?path.join(process.resourcesPath,'gestock-shell-fenix.ico'):path.join(__dirname,'assets','gestock-fenix.ico'),appIconIndex:0});
   win.loadFile('index.html');
   win.on('focus', () => updates.resume());
   let closeConfirmed = false;
@@ -71,7 +71,7 @@ ipcMain.handle('reports:save',async(event,report)=>{
  const {fileURLToPath}=require('node:url');
  if(!event.senderFrame||!event.senderFrame.url.startsWith('file:')||path.resolve(fileURLToPath(event.senderFrame.url))!==path.resolve(__dirname,'index.html'))throw Error('Origem inválida.');
  const {buildReportHTML}=require('./reports');const fs=require('node:fs/promises');
- const logo='data:image/png;base64,'+(await fs.readFile(path.join(__dirname,'assets/identity/gestock-logo-refined-dark.png'))).toString('base64');
+ const logo='data:image/png;base64,'+(await fs.readFile(path.join(__dirname,'assets/identity/gestock-logo-fenix-transparente.png'))).toString('base64');
  const html=buildReportHTML(report,logo);
  const result=await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender),{title:'Guardar relatório PDF',defaultPath:'Gestock-'+report.kind+'-'+new Date().toISOString().slice(0,10)+'.pdf',filters:[{name:'PDF',extensions:['pdf']}]});
  if(result.canceled||!result.filePath)return {cancelled:true};
